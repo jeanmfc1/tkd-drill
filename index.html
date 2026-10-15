@@ -1,0 +1,1898 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0d0f14">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="TKD Drill">
+<meta name="description" content="Audio drill caller for taekwondo: random stance and technique sequences, and the Taegeuk forms step by step.">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-180.png">
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)} img{max-width:100%}</style>
+<title>TKD Drill</title>
+</head>
+<body>
+
+<style>
+/* Layout: full-screen app, three-line command stack in the center, control strip at bottom */
+:root {
+  --bg: #0d0f14;
+  --surface: #161920;
+  --border: #252933;
+  --fg: #e8eaf0;
+  --fg-muted: #7a8099;
+  --accent: #c8313a;
+  --accent-dim: #7a1e24;
+  --accent-glow: rgba(200, 49, 58, 0.18);
+  --chip-bg: #1d2130;
+  color-scheme: dark;
+}
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    --bg: #f5f5f7;
+    --surface: #ffffff;
+    --border: #dde0e8;
+    --fg: #111318;
+    --fg-muted: #7a8099;
+    --accent: #b52830;
+    --accent-dim: #f2d0d2;
+    --accent-glow: rgba(181, 40, 48, 0.1);
+    --chip-bg: #ebebef;
+    color-scheme: light;
+  }
+}
+:root[data-theme="light"] {
+  --bg: #f5f5f7;
+  --surface: #ffffff;
+  --border: #dde0e8;
+  --fg: #111318;
+  --fg-muted: #7a8099;
+  --accent: #b52830;
+  --accent-dim: #f2d0d2;
+  --accent-glow: rgba(181, 40, 48, 0.1);
+  --chip-bg: #ebebef;
+  color-scheme: light;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+[hidden] { display: none !important; }
+
+html, body {
+  min-height: 100%;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: 'Inter', system-ui, sans-serif;
+  overflow-x: hidden;
+}
+html { height: 100%; }
+
+body {
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-block: 14px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.logo {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 1.4rem;
+  letter-spacing: 0.08em;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.logo-dot { width: 8px; height: 8px; background: var(--accent); border-radius: 50%; }
+.badge {
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--fg-muted);
+  background: var(--chip-bg);
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-variant-numeric: tabular-nums;
+}
+
+.stage {
+  flex: 1 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  padding-block: 24px;
+}
+
+.command {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  text-align: center;
+  padding: 0 8px;
+}
+.line {
+  font-family: 'Bebas Neue', sans-serif;
+  line-height: 1;
+  letter-spacing: 0.04em;
+  text-wrap: balance;
+}
+.line-leg {
+  font-size: clamp(1.3rem, 4vw, 2rem);
+  color: var(--accent);
+}
+.line-stance {
+  font-size: clamp(2rem, 7vw, 3.6rem);
+  color: var(--fg-muted);
+}
+.line-tech {
+  font-size: clamp(2.6rem, 10vw, 5.5rem);
+  color: var(--fg);
+}
+.line-side {
+  font-size: clamp(1rem, 3vw, 1.4rem);
+  color: var(--fg-muted);
+  letter-spacing: 0.1em;
+  min-height: 1em;
+}
+/* Kick calls: the kick is the big line, the landing stance reads below it */
+.command.kick .line-stance { order: 3; font-size: clamp(1.3rem, 4.5vw, 2.2rem); }
+.command.kick .line-tech { order: 2; }
+.command.kick .line-leg { order: 1; }
+.command.kick .line-side { order: 4; }
+
+/* Forms mode: the step text is a sentence, so it gets a smaller, wrapping treatment */
+.command.form-mode .line-stance { display: none; }
+.command.form-mode .line-tech {
+  font-size: clamp(1.6rem, 5.5vw, 3rem);
+  letter-spacing: 0.03em;
+  line-height: 1.15;
+  max-width: 22ch;
+}
+.command.form-mode .line-side { display: none; }
+.step-bar {
+  width: min(360px, 100%);
+  height: 4px;
+  background: var(--border);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.step-bar > div { height: 100%; background: var(--accent); width: 0; transition: width 0.2s; }
+.step-nav { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+.nav-btn {
+  font-family: inherit; font-size: 0.78rem; font-weight: 600; letter-spacing: 0.04em;
+  padding: 9px 14px; border-radius: 6px;
+  border: 1px solid var(--border); background: var(--surface); color: var(--fg);
+  cursor: pointer; min-width: 84px;
+}
+.nav-btn:hover { border-color: var(--accent-dim); color: var(--accent); }
+.nav-btn:active { transform: scale(0.97); }
+.nav-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.nav-info { border-color: var(--accent-dim); color: var(--accent); background: var(--accent-glow); }
+.pop-sections { display: flex; flex-direction: column; gap: 16px; }
+.pop-section h3 {
+  font-size: 0.72rem; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--accent); margin-bottom: 4px;
+}
+.pop-section .pop-name { font-family: 'Bebas Neue', sans-serif; font-size: 1.3rem; letter-spacing: 0.05em; margin-bottom: 4px; }
+.pop-section p { font-size: 0.92rem; line-height: 1.6; max-width: 60ch; }
+.pop-section p.empty { color: var(--fg-muted); font-style: italic; }
+.pop-text, .pop-section { font-size: 0.92rem; line-height: 1.6; }
+.pop-text h4, .pop-section h4 {
+  font-size: 0.7rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--fg-muted); margin-top: 12px; margin-bottom: 4px;
+}
+.pop-text ul, .pop-section ul { padding-left: 18px; display: flex; flex-direction: column; gap: 3px; }
+.pop-text p, .pop-section p { max-width: 60ch; }
+.pop-editor { min-height: 260px; }
+
+.sheet-body.single { display: block; }
+.form-editor {
+  width: 100%;
+  min-height: 50vh;
+  font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  padding: 10px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--fg);
+  resize: vertical;
+}
+.form-editor:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.editor-hint { font-size: 0.78rem; color: var(--fg-muted); margin-bottom: 10px; line-height: 1.5; }
+.editor-tools { display: flex; gap: 8px; margin-top: 10px; align-items: center; }
+
+.flash { animation: flash-in 0.25s ease-out forwards; }
+@keyframes flash-in {
+  0%   { opacity: 0; transform: translateY(6px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+@media (prefers-reduced-motion: reduce) { .flash { animation: none; } }
+
+.progress-ring-wrap { position: relative; width: 88px; height: 88px; flex-shrink: 0; }
+.progress-ring-wrap svg { transform: rotate(-90deg); width: 88px; height: 88px; }
+.ring-track { stroke: var(--border); fill: none; stroke-width: 4; }
+.ring-fill { stroke: var(--accent); fill: none; stroke-width: 4; stroke-linecap: round; }
+.count-center {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center; flex-direction: column;
+}
+.count-num {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 1.7rem; line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.count-label { font-size: 0.6rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--fg-muted); }
+
+.idle-hint { font-size: 0.8rem; color: var(--fg-muted); text-align: center; }
+
+.controls {
+  flex-shrink: 0;
+  padding-block: 16px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.ctrl-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.ctrl-label {
+  font-size: 0.68rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--fg-muted);
+  width: 64px;
+  flex-shrink: 0;
+}
+.chip {
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 5px 10px;
+  border-radius: 5px;
+  background: var(--chip-bg);
+  color: var(--fg-muted);
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  user-select: none;
+  font-family: inherit;
+}
+.chip:hover { color: var(--fg); }
+.chip.active { background: var(--accent-glow); color: var(--accent); border-color: var(--accent-dim); }
+.chip:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.voice-select {
+  flex: 1 1 160px;
+  min-width: 0;
+  font-family: inherit;
+  font-size: 0.8rem;
+  padding: 5px 8px;
+  border-radius: 5px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--fg);
+}
+.voice-select:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+.bottom-row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.tempo-wrap { flex: 1 1 140px; display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.tempo-top { display: flex; justify-content: space-between; align-items: baseline; }
+.tempo-label { font-size: 0.68rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--fg-muted); }
+.tempo-val { font-family: 'Bebas Neue', sans-serif; font-size: 1.1rem; letter-spacing: 0.04em; font-variant-numeric: tabular-nums; }
+.slider {
+  -webkit-appearance: none; appearance: none;
+  width: 100%; height: 4px;
+  background: var(--border); border-radius: 2px; outline: none; cursor: pointer;
+}
+.slider::-webkit-slider-thumb { -webkit-appearance: none; width: 14px; height: 14px; border-radius: 50%; background: var(--accent); cursor: pointer; }
+.slider::-moz-range-thumb { width: 14px; height: 14px; border-radius: 50%; background: var(--accent); border: none; cursor: pointer; }
+.slider:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
+
+.play-btn {
+  width: 56px; height: 56px; border-radius: 50%; border: none;
+  background: var(--accent); color: #fff;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; transition: background 0.15s, transform 0.1s;
+}
+.play-btn:active { transform: scale(0.94); }
+.play-btn.running { background: var(--fg-muted); }
+.play-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+
+/* Technique picker sheet */
+.sheet {
+  position: fixed;
+  inset: 0;
+  background: var(--bg);
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+.sheet-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-block: 14px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.sheet-title { font-family: 'Bebas Neue', sans-serif; font-size: 1.4rem; letter-spacing: 0.08em; }
+.sheet-body {
+  flex: 1;
+  overflow-y: auto;
+  padding-block: 16px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 20px 28px;
+  align-content: start;
+}
+.group-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 6px;
+}
+.group-title {
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.group-tools { display: flex; gap: 8px; }
+.link-btn {
+  background: none; border: none; cursor: pointer;
+  font-family: inherit; font-size: 0.68rem; color: var(--fg-muted);
+  letter-spacing: 0.04em; padding: 0;
+}
+.link-btn:hover { color: var(--fg); }
+.link-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.check-list { display: flex; flex-direction: column; gap: 2px; }
+.check-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 6px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  user-select: none;
+}
+.check-row:hover { background: var(--chip-bg); }
+.check-row input {
+  accent-color: var(--accent);
+  width: 16px; height: 16px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.check-row input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.check-row.off { color: var(--fg-muted); }
+.check-row label { flex: 1; cursor: pointer; min-width: 0; }
+.remove-btn {
+  background: none; border: none; cursor: pointer;
+  color: var(--fg-muted); font-size: 1.1rem; line-height: 1;
+  width: 24px; height: 24px; border-radius: 4px; flex-shrink: 0;
+  opacity: 0.5;
+}
+.check-row:hover .remove-btn { opacity: 1; }
+.remove-btn:hover { color: var(--accent); background: var(--accent-glow); }
+.remove-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; opacity: 1; }
+.info-btn {
+  background: none; border: 1px solid var(--border); cursor: pointer;
+  color: var(--fg-muted); font-family: Georgia, serif; font-style: italic; font-size: 0.8rem; line-height: 1;
+  width: 22px; height: 22px; border-radius: 50%; flex-shrink: 0;
+}
+.info-btn:hover { color: var(--accent); border-color: var(--accent-dim); background: var(--accent-glow); }
+.info-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* Description popup */
+.pop-backdrop {
+  position: fixed; inset: 0; z-index: 20;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex; align-items: center; justify-content: center;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 24px;
+}
+.pop {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  width: min(520px, 100%);
+  max-height: 100%;
+  overflow-y: auto;
+  padding: 18px 20px 20px;
+  display: flex; flex-direction: column; gap: 12px;
+}
+.pop-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.pop-title { font-family: 'Bebas Neue', sans-serif; font-size: 1.5rem; letter-spacing: 0.06em; }
+.pop-tools { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+.pop-text { font-size: 0.95rem; line-height: 1.6; color: var(--fg); max-width: 60ch; }
+.pop-editor { min-height: 180px; }
+
+.share-body { display: flex; gap: 20px; flex-wrap: wrap; align-items: flex-start; }
+.qr-wrap {
+  background: #ffffff; padding: 12px; border-radius: 8px; flex: 0 0 auto;
+  display: flex; align-items: center; justify-content: center;
+  width: 200px; height: 200px; box-sizing: content-box;
+}
+.qr-wrap canvas, .qr-wrap img { width: 200px !important; height: 200px !important; display: block; }
+.share-text { flex: 1 1 220px; min-width: 0; font-size: 0.9rem; line-height: 1.55; display: flex; flex-direction: column; gap: 10px; }
+.share-text h4 { font-size: 0.7rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--fg-muted); margin-top: 4px; }
+.share-text ul { padding-left: 18px; display: flex; flex-direction: column; gap: 6px; }
+.share-text .muted { color: var(--fg-muted); font-size: 0.82rem; }
+.link-row { display: flex; gap: 6px; }
+.link-row input {
+  flex: 1; min-width: 0; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 0.78rem;
+  padding: 7px 10px; border-radius: 5px; border: 1px solid var(--border); background: var(--surface); color: var(--fg);
+}
+.link-row input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+.add-row { display: flex; gap: 6px; margin-top: 8px; }
+.add-row input {
+  flex: 1; min-width: 0;
+  font-family: inherit; font-size: 0.85rem;
+  padding: 7px 10px;
+  border-radius: 5px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--fg);
+}
+.add-row input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.add-btn {
+  font-family: inherit; font-size: 0.72rem; font-weight: 600;
+  letter-spacing: 0.06em; text-transform: uppercase;
+  padding: 0 12px; border-radius: 5px;
+  border: 1px solid var(--accent-dim);
+  background: var(--accent-glow); color: var(--accent);
+  cursor: pointer;
+}
+.add-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.done-btn {
+  font-family: inherit;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 7px 14px;
+  border-radius: 6px;
+  border: none;
+  background: var(--accent);
+  color: #fff;
+  cursor: pointer;
+}
+.done-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.summary-text { font-size: 0.72rem; color: var(--fg-muted); margin-left: auto; font-variant-numeric: tabular-nums; }
+
+.no-speech-warn {
+  font-size: 0.75rem; color: var(--fg-muted); text-align: center;
+  padding: 8px; background: var(--chip-bg); border-radius: 6px; margin-top: 10px;
+}
+</style>
+
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Bebas+Neue&display=swap">
+
+<header class="header">
+  <div class="logo"><span class="logo-dot"></span>TKD Drill Caller</div>
+  <div class="header-right">
+    <button class="chip" id="open-share" title="Share this app">Share</button>
+    <span class="badge" id="session-badge">Ready</span>
+  </div>
+</header>
+
+<div class="no-speech-warn" id="no-speech-warn" hidden>
+  This browser can't speak. Commands will show on screen only.
+</div>
+
+<main class="stage">
+  <div class="command">
+    <div class="line line-leg" id="line-leg">From ready stance</div>
+    <div class="line line-stance" id="line-stance">Press play, or Next</div>
+    <div class="line line-tech" id="line-tech"></div>
+    <div class="line line-side" id="line-side"></div>
+  </div>
+
+  <div class="progress-ring-wrap">
+    <svg viewBox="0 0 88 88">
+      <circle class="ring-track" cx="44" cy="44" r="40"/>
+      <circle class="ring-fill" id="ring-fill" cx="44" cy="44" r="40" stroke-dasharray="251.3" stroke-dashoffset="251.3"/>
+    </svg>
+    <div class="count-center">
+      <span class="count-num" id="drill-count">0</span>
+      <span class="count-label">calls</span>
+    </div>
+  </div>
+
+  <div class="step-bar" id="step-bar" hidden><div id="step-bar-fill"></div></div>
+
+  <div class="step-nav" id="step-nav" hidden>
+    <button class="nav-btn" id="nav-restart" title="Restart form">⟲ Restart</button>
+    <button class="nav-btn" id="nav-back" title="Previous step (left arrow)">◀ Back</button>
+    <button class="nav-btn" id="nav-again" title="Repeat this step">↻ Again</button>
+    <button class="nav-btn" id="nav-next" title="Next step (right arrow)">Next ▶</button>
+    <button class="nav-btn nav-info" id="nav-info" title="How to do this call">ⓘ Details</button>
+  </div>
+
+  <div class="idle-hint" id="idle-hint">Press play. Space bar also starts and stops.</div>
+</main>
+
+<section class="controls">
+  <div class="ctrl-row" id="mode-chips">
+    <span class="ctrl-label">Mode</span>
+    <button class="chip active" data-mode="random">Random</button>
+    <button class="chip" data-mode="forms">Taegeuk forms</button>
+  </div>
+
+  <div class="ctrl-row" id="form-chips" hidden>
+    <span class="ctrl-label">Form</span>
+    <button class="chip active" data-form="0">1 Il</button>
+    <button class="chip" data-form="1">2 Ee</button>
+    <button class="chip" data-form="2">3 Sam</button>
+    <button class="chip" data-form="3">4 Sa</button>
+    <button class="chip" data-form="4">5 Oh</button>
+    <button class="chip" data-form="5">6 Yuk</button>
+    <button class="chip" data-form="6">7 Chil</button>
+    <button class="chip" data-form="7">8 Pal</button>
+    <button class="chip" id="open-editor">Edit steps</button>
+  </div>
+
+  <div class="ctrl-row" id="cue-chips">
+    <span class="ctrl-label">Say moves</span>
+    <button class="chip active" data-cue="off">Off</button>
+    <button class="chip" data-cue="on">Step, shift, land</button>
+  </div>
+
+  <div class="ctrl-row" id="voice-row">
+    <span class="ctrl-label">Voice</span>
+    <select class="voice-select" id="voice-select" aria-label="Voice"></select>
+    <button class="chip" id="test-voice">Test</button>
+  </div>
+
+  <div class="ctrl-row" id="pool-row">
+    <span class="ctrl-label">Pool</span>
+    <button class="chip" id="open-picker">Choose techniques</button>
+    <span class="summary-text" id="pool-summary"></span>
+  </div>
+
+  <div class="ctrl-row" id="leg-chips">
+    <span class="ctrl-label">Lead leg</span>
+    <button class="chip active" data-leg="alternate">Alternate</button>
+    <button class="chip" data-leg="random">Random</button>
+    <button class="chip" data-leg="left">Left only</button>
+    <button class="chip" data-leg="right">Right only</button>
+  </div>
+
+  <div class="ctrl-row" id="hand-chips">
+    <span class="ctrl-label">Call side</span>
+    <button class="chip active" data-hand="lr">Left / right</button>
+    <button class="chip" data-hand="fr">Front / rear</button>
+    <button class="chip" data-hand="off">Off</button>
+  </div>
+
+  <div class="bottom-row">
+    <div class="tempo-wrap">
+      <div class="tempo-top">
+        <span class="tempo-label">Voice speed</span>
+        <span class="tempo-val" id="rate-display">1.0×</span>
+      </div>
+      <input type="range" class="slider" id="rate-slider" min="0.6" max="1.6" step="0.1" value="1">
+    </div>
+    <div class="tempo-wrap">
+      <div class="tempo-top">
+        <span class="tempo-label">Pause after call</span>
+        <span class="tempo-val" id="tempo-display">3s</span>
+      </div>
+      <input type="range" class="slider" id="tempo-slider" min="0.5" max="12" step="0.5" value="3">
+    </div>
+    <button class="play-btn" id="play-btn" aria-label="Start drill">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" id="play-icon"><polygon points="5,3 19,12 5,21"/></svg>
+    </button>
+  </div>
+</section>
+
+<div class="sheet" id="picker" hidden>
+  <div class="sheet-head">
+    <span class="sheet-title">Techniques in the drill</span>
+    <button class="done-btn" id="close-picker">Done</button>
+  </div>
+  <div class="sheet-body" id="picker-body"></div>
+</div>
+
+<div class="pop-backdrop" id="info-pop" hidden>
+  <div class="pop" role="dialog" aria-labelledby="info-title">
+    <div class="pop-head">
+      <span class="pop-title" id="info-title"></span>
+      <div class="pop-tools">
+        <button class="link-btn" id="info-edit-btn">Edit</button>
+        <button class="done-btn" id="info-close">Close</button>
+      </div>
+    </div>
+    <div class="pop-text" id="info-text"></div>
+    <div class="pop-sections" id="info-sections" hidden></div>
+    <textarea class="form-editor pop-editor" id="info-edit" hidden spellcheck="false"></textarea>
+  </div>
+</div>
+
+<div class="pop-backdrop" id="share-pop" hidden>
+  <div class="pop" role="dialog" aria-labelledby="share-title">
+    <div class="pop-head">
+      <span class="pop-title" id="share-title">Share TKD Drill</span>
+      <button class="done-btn" id="share-close">Close</button>
+    </div>
+    <div class="share-body">
+      <div class="qr-wrap" id="qr-wrap" aria-label="QR code for this app"></div>
+      <div class="share-text">
+        <p>Point a phone camera at the code, or send the link.</p>
+        <div class="link-row">
+          <input type="text" id="share-url" readonly aria-label="App link">
+          <button class="add-btn" id="copy-url">Copy</button>
+        </div>
+        <h4>Put it on your phone like an app</h4>
+        <ul>
+          <li><strong>iPhone:</strong> open the link in Safari, tap the Share button, then "Add to Home Screen".</li>
+          <li><strong>Android:</strong> open the link in Chrome, tap the menu (three dots), then "Add to Home screen".</li>
+        </ul>
+        <p class="muted">Updates arrive automatically: the link always opens the newest version.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="sheet" id="editor" hidden>
+  <div class="sheet-head">
+    <span class="sheet-title" id="editor-title">Edit steps</span>
+    <button class="done-btn" id="close-editor">Done</button>
+  </div>
+  <div class="sheet-body single">
+    <p class="editor-hint">One step per line, written the way you want to hear it called. Change anything your school does differently. Blank lines are ignored.</p>
+    <textarea class="form-editor" id="form-text" spellcheck="false"></textarea>
+    <div class="editor-tools">
+      <button class="link-btn" id="reset-form">Reset this form to default</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+const defaults = {
+  stances: ["Front stance", "Back stance", "Walking stance", "Horse stance", "Cat stance"],
+  blocks:  ["Low block", "High block", "Inside block", "Outside block", "Knife hand block", "X block", "Pressing block"],
+  punches: ["Straight punch", "Reverse punch", "Upper cut", "Backfist", "Hammer fist", "Knife hand strike", "Elbows up", "Elbows across", "Palm strike"],
+  kicks:   ["Front kick", "Turning kick", "Side kick", "Back kick", "Hammer kick", "Crescent kick", "Push kick", "Hook kick"],
+};
+
+// Each entry: how (one paragraph), form (checkpoints for correct execution), mistakes (what to watch for).
+const descDefaults = {
+  "Front stance": {
+    how: "Long, deep stance for driving forward. Step out so the feet are about one and a half shoulder widths apart front to back and a shoulder width apart side to side. Bend the front knee until the shin is vertical; keep the rear leg straight with the rear foot flat and turned in about 30 degrees. Roughly 60 percent of the weight is on the front leg.",
+    form: ["Front knee over the ankle, shin vertical, you cannot see your front toes", "Rear heel flat on the floor, rear leg locked straight", "Hips and shoulders square to the front", "Back upright, not leaning forward", "Feet a shoulder width apart sideways so you have a base, not on one line"],
+    mistakes: ["Rear heel lifting off the floor", "Front knee collapsing inward", "Stance too narrow, feet on a tightrope", "Leaning the torso forward over the front knee", "Rear foot turned out too far, opening the hips"],
+  },
+  "Back stance": {
+    how: "Defensive stance with the weight back. Feet form an L: rear foot turned 90 degrees to the side, front foot pointing at the target, heels on one line about one and a half shoulder widths apart. Bend the rear knee deeply so about 70 percent of the weight sits on it; the front knee is slightly bent and the front foot is light.",
+    form: ["Rear knee bent and pushed outward over the rear foot", "Heels in one line, feet at 90 degrees", "Both feet flat on the floor", "Hips turned half away from the target", "Front foot light enough to lift instantly", "Upper body upright, centered over the rear leg"],
+    mistakes: ["Weight creeping forward onto the front foot", "Rear knee pointing inward", "Front foot turned outward instead of straight", "Rear foot lifting onto the ball", "Standing too tall, rear knee barely bent"],
+  },
+  "Walking stance": {
+    how: "A natural step forward. Front foot pointing straight ahead, rear foot turned out about 30 degrees, a shoulder width apart sideways and one normal step apart lengthwise. Both knees almost straight, weight evenly spread. It commits to nothing, which is why the early forms use it for fast blocks and punches.",
+    form: ["Feet a shoulder width apart sideways, not on one line", "Front foot straight, rear foot turned out about 30 degrees", "Weight even, both feet flat", "Knees soft, not locked and not deeply bent", "Hips square to the front"],
+    mistakes: ["Making it as long and deep as a front stance", "Feet in one line, losing side balance", "Rear heel lifting", "Leaning back or forward"],
+  },
+  "Horse stance": {
+    how: "Sit down as if riding a horse. Feet parallel, pointing straight ahead, about two shoulder widths apart. Bend both knees and push them outward over the feet, drop the hips until the thighs approach parallel, keep the back straight and the weight even. There is no front or rear leg.",
+    form: ["Toes pointing straight ahead, feet parallel", "Knees pushed out over the toes, not inward", "Back vertical, chest up, pelvis tucked slightly", "Weight even, both feet flat", "Low enough that the thighs angle well below the hips"],
+    mistakes: ["Knees caving inward", "Toes turned outward", "Bending forward at the waist", "Standing too high", "Weight shifting to one leg"],
+  },
+  "Cat stance": {
+    how: "Almost all the weight on the rear leg, which is bent, with the front foot a short step ahead touching only on the ball, heel up, front knee bent. Rear foot turned out about 30 degrees, feet close together. The front leg is free to kick immediately and you can slide forward or back without stepping. Also called tiger stance.",
+    form: ["About 90 percent of the weight on the rear leg", "Front heel raised, ball of the foot touching lightly", "Both knees bent, front knee pointing forward", "Short stance, roughly one foot length between the feet", "Body upright, centered over the rear leg"],
+    mistakes: ["Putting real weight on the front foot", "Front heel resting on the floor", "Stance too long, which turns it into a back stance", "Leaning the upper body forward", "Rear knee straightening"],
+  },
+  "Low block": {
+    how: "Deflects attacks to the stomach, groin and legs. Chamber the blocking fist at the opposite shoulder, palm facing your ear, with the other arm extended low in front. Sweep the blocking arm down and across in a diagonal line while the other hand pulls sharply to the hip. Finish with the fist about a fist's width above the front knee, arm nearly straight, striking with the outer forearm.",
+    form: ["Chamber fist high at the opposite shoulder, elbow pointing forward", "Fist finishes above the front knee, a fist's width off the thigh", "Blocking arm nearly straight, slight bend in the elbow", "Outer forearm makes the contact, palm facing down and in", "Pulling hand snaps to the hip at the same moment", "Hips rotate slightly into the block"],
+    mistakes: ["Chambering too low, so the block has no travel", "Finishing with the fist against the thigh", "Elbow locked straight", "Pulling hand left hanging in front instead of at the hip", "Blocking only with the arm, no hip movement"],
+  },
+  "High block": {
+    how: "Protects the head from downward and straight attacks. Chamber the blocking fist low across the body near the opposite hip, palm up, while the other arm is high in front. Drive the blocking arm up the center of the body and rotate the fist outward at the end so the palm faces away. Finish with the forearm angled upward about a fist's width above the forehead.",
+    form: ["Forearm finishes a fist above the forehead, angled up and slightly outward", "Fist higher than the elbow, elbow lower than the shoulder", "Palm facing away from the face at the finish", "Outer forearm takes the contact", "Pulling hand at the hip", "Head stays up, not ducking under the block"],
+    mistakes: ["Blocking too close to the face, forearm touching the head", "Elbow flaring out to the side", "Forearm horizontal instead of angled", "Dropping the head or hunching the shoulders", "Starting the block from the hip with no cross-body chamber"],
+  },
+  "Inside block": {
+    how: "Middle section block that sweeps from outside to inside. Chamber the blocking fist out to the side at shoulder height, palm facing away, with the other arm extended in front. Swing the blocking forearm inward across the body while the other hand pulls to the hip. Finish with the fist in front of the opposite shoulder, elbow bent about 90 degrees and a fist's width from the ribs, palm facing you. Contact is with the inner forearm.",
+    form: ["Elbow bent 90 degrees, a fist's width from the body", "Fist at shoulder height, in line with the opposite shoulder", "Palm facing your face at the finish", "Blocking arm crosses the centerline slightly", "Hips rotate with the block", "Pulling hand snaps to the hip"],
+    mistakes: ["Elbow pulled tight against the ribs", "Blocking too far across the body", "Fist drifting above the shoulder or below the chest", "Chambering by swinging the arm back behind you", "Keeping the hips still"],
+  },
+  "Outside block": {
+    how: "Middle section block that sweeps from inside to outside. Chamber the blocking fist across the body near the opposite armpit, palm facing in, with the other arm extended in front. Swing the forearm outward while the other hand pulls to the hip. Finish with the fist in line with the same-side shoulder, elbow bent about 90 degrees, palm facing you, striking with the outer forearm to knock the attack off your centerline.",
+    form: ["Elbow bent 90 degrees, forearm vertical", "Fist in line with your own shoulder, at shoulder height", "Outer forearm makes contact", "Elbow a fist's width from the body", "Pulling hand at the hip", "Shoulders square, not twisted away"],
+    mistakes: ["Swinging the arm too far out, past the shoulder line", "Elbow locked against the ribs", "Fist higher than the head or dropping to chest level", "Blocking with the wrist instead of the forearm", "Shoulder rising toward the ear"],
+  },
+  "Knife hand block": {
+    how: "Open-hand block with the outer edge of the hand, fingers together, thumb bent and tucked. Single knife hand block: chamber the open hand by the opposite ear and sweep it out like an outside block, finishing in line with the shoulder, edge forward, while the other hand pulls to the hip. Double knife hand block: the rear hand finishes palm up in front of the solar plexus, fingers forward, as a guard. Usually performed in back stance.",
+    form: ["Fingers together and straight, thumb bent in", "Blocking hand finishes at shoulder height, in line with the shoulder, palm facing forward and slightly down", "Elbow bent about 90 degrees", "Wrist straight, edge of the hand leading", "In the double block, the guard hand is palm up at the solar plexus, elbow close to the body", "Hips turned half away in back stance"],
+    mistakes: ["Fingers spread or thumb sticking out", "Wrist bent back, striking with the palm", "Blocking hand too high or across the face", "Guard hand floating low or far from the body", "Leaning forward out of the back stance"],
+  },
+  "X block": {
+    how: "Both forearms cross at the wrists to catch an attack. Low X block: from the hips, thrust both fists down and forward together to stop a front kick, crossing just below the belt with the arms nearly straight. High X block: drive both arms up to cross above the forehead against a downward strike. Keep a slight bend in the elbows so the block absorbs impact.",
+    form: ["Wrists cross, not the forearms higher up", "Low block: fists just below the belt, arms almost straight, slight elbow bend", "High block: crossing point a fist above the forehead, palms facing out", "Both arms move together and arrive together", "Shoulders down, body behind the block", "Lead hand on the outside unless your school specifies"],
+    mistakes: ["Crossing at the elbows", "Elbows locked straight", "Blocking too close to the body or face", "One arm arriving late", "Hunching the shoulders"],
+  },
+  "Pressing block": {
+    how: "An open palm presses an incoming kick or grab down toward the floor. Start with the hand at chest height, elbow bent, and push the heel of the palm down and slightly forward in a short arc, finishing at about belt height with the elbow still bent and close to the body. Usually combined with a strike or block from the other hand.",
+    form: ["Contact with the heel of the palm, fingers up and slightly bent", "Elbow stays bent and close to the ribs", "Short, firm motion from chest to belt height", "Hips drop slightly into the press", "Other hand chambered or executing at the same time"],
+    mistakes: ["Slapping with the fingers instead of pressing with the palm", "Straightening the arm and reaching", "Pressing too far down, bending at the waist", "Elbow flaring out"],
+  },
+  "Straight punch": {
+    how: "The basic punch. Start with the fist at the hip, palm up. Drive it straight to the target in a line, rotating the forearm in the last third so the palm faces down at impact, and strike with the first two knuckles. The other hand pulls sharply back to the hip at the same time. Lead-hand version is a jab; rear-hand version is a reverse punch.",
+    form: ["Fist travels in a straight line, not an arc", "Rotation happens at the end, not at the start", "Wrist straight, knuckles of the index and middle finger in line with the forearm", "Shoulder down, elbow pointing to the floor during travel", "Pulling hand reaches the hip at the same moment the punch lands", "Target at your own solar plexus height for a middle punch"],
+    mistakes: ["Wrist bending at impact", "Elbow flaring outward, turning it into a hook", "Shoulder lifting toward the ear", "Rotating the fist too early", "Leaving the other hand in front instead of pulling it back"],
+  },
+  "Reverse punch": {
+    how: "Punch with the hand on the same side as the rear leg. Begin with the fist at the hip, palm up. Rotate the hips and rear shoulder forward while the fist drives straight to the target, turning over at the end. The pulling hand snaps back to the hip. The whole body turns behind it, which makes it the most powerful basic punch.",
+    form: ["Hips rotate first, the fist follows", "Rear heel stays down, pushing the hip through", "Fist finishes in the center of the body, in line with the target", "Shoulders square at impact", "Punching shoulder slightly forward of the other, but not reaching", "Pulling hand at the hip"],
+    mistakes: ["Punching with the arm only, hips still", "Rear heel lifting and the knee collapsing", "Leaning forward over the front leg", "Overreaching so the shoulder drops", "Punching across the body instead of to the center"],
+  },
+  "Upper cut": {
+    how: "Short rising punch to the chin or solar plexus. Start with the fist low, palm facing you, elbow bent. Bend the knees slightly, then drive up through the legs and hips while the fist rises in a tight arc, keeping the elbow under the fist. Impact comes with the palm facing you and the knuckles pointing up.",
+    form: ["Elbow bent about 90 degrees and directly under the fist at impact", "Power comes from the legs straightening and the hip turning", "Fist stays close to the body, no wide swing", "Other hand guards or pulls to the hip", "Chin tucked, shoulders down"],
+    mistakes: ["Swinging the fist in a wide loop from the hip", "Dropping the guard hand", "Leaning back and lifting the heel", "Straightening the arm at impact"],
+  },
+  "Backfist": {
+    how: "Strike with the back of the first two knuckles. Chamber the fist near the opposite shoulder or in front of the chest, palm facing you. Whip the elbow out toward the target first, then snap the forearm straight so the fist flicks out and back. Targets the temple, bridge of the nose or side of the head. Usually the lead hand.",
+    form: ["Elbow leads, forearm snaps last", "Wrist straight and firm at impact, back of the knuckles making contact", "Fist returns to the chamber as fast as it went out", "Elbow stays slightly bent at full extension", "Other hand guards"],
+    mistakes: ["Pushing the fist out slowly instead of snapping", "Elbow locking straight", "Striking with the flat back of the hand instead of the knuckles", "Winding up by pulling the fist far back", "Wrist going limp"],
+  },
+  "Hammer fist": {
+    how: "Strike with the bottom of the closed fist, like swinging a hammer. Raise the fist high, then swing the arm in an arc from the shoulder with the wrist firm. Downward to the collarbone, top of the head or a grabbing arm; inward to the temple or jaw; outward to the side of the head. Safe for the hand because it uses the padded base of the fist.",
+    form: ["Arc comes from the shoulder with a slight elbow bend", "Wrist locked straight, fist tight", "Contact with the meaty bottom of the fist, little finger side", "Body weight drops into a downward strike", "Other hand pulls to the hip or guards"],
+    mistakes: ["Bending the wrist on contact", "Striking with the side of the hand instead of the bottom of the fist", "Elbow locking at the end of the arc", "Swinging with the arm only, no body"],
+  },
+  "Knife hand strike": {
+    how: "Strike with the outer edge of the open hand, fingers together and slightly bent, thumb tucked. Inward knife hand: chamber by the ear, palm facing the ear, and chop in to the side of the neck, finishing palm up. Outward knife hand: chamber across the body near the opposite shoulder, palm facing you, and swing out, finishing palm down. The other hand pulls to the hip.",
+    form: ["Fingers together, slightly bent, thumb bent and tucked", "Wrist straight, edge of the hand hits first", "Arm finishes nearly straight with a slight bend", "Hips rotate into the strike", "Contact point is the fleshy edge between the wrist and the little finger knuckle", "Pulling hand at the hip"],
+    mistakes: ["Fingers spread or thumb out", "Wrist bending so the palm hits", "Striking with the fingers or the knuckle", "Elbow locking", "Shoulder lifting"],
+  },
+  "Elbows up": {
+    how: "Rising elbow strike. Fold the arm tight so the fist is near the shoulder, then drive the elbow up and forward in a tight arc to the chin or solar plexus, with the fist finishing beside your own ear. Push up through the legs and rotate the hip into it. Very short range.",
+    form: ["Arm folded tight, fist close to the shoulder throughout", "Point of the elbow or the forearm just below it makes contact", "Elbow travels upward in front of the body, not out to the side", "Hip rotates and legs extend into the strike", "Other hand guards"],
+    mistakes: ["Opening the arm so it becomes a swing", "Lifting the shoulder instead of the elbow", "Leaning back", "Striking with the upper arm"],
+  },
+  "Elbows across": {
+    how: "Horizontal elbow strike. Fold the arm tight and swing the elbow across the body at shoulder height, striking with the point of the elbow to the jaw, temple or ribs. Rotate hips and shoulders fully into it. In forms it is often done to the open palm of the other hand as a target.",
+    form: ["Forearm folded tight, fist near the chest", "Elbow travels on a horizontal line at shoulder height", "Hips and shoulders rotate fully, rear heel pivots", "Contact with the point of the elbow", "When striking the palm, the target hand stays in front of the body and the elbow meets it firmly"],
+    mistakes: ["Arm partly open, striking with the forearm", "Elbow dropping below shoulder height", "Rotating the arm only, hips still", "Leaning the head forward into the strike", "Target hand drifting away so the elbow misses it"],
+  },
+  "Palm strike": {
+    how: "Strike with the heel of the palm. Pull the fingers back and bend them slightly, bend the wrist back so the heel of the hand leads, and drive the hand straight out from the hip or chest like a punch. Targets the chin, nose or chest. Safer for the hand than a punch and strong at close range.",
+    form: ["Wrist bent back, fingers up and slightly curled", "Heel of the palm makes contact, not the fingers", "Straight line from the chamber to the target", "Hip rotates into the strike", "Elbow slightly bent at full extension", "Other hand pulls to the hip"],
+    mistakes: ["Fingers straight and pointed at the target", "Wrist not bent back, so the whole hand slaps", "Elbow flaring out", "Pushing instead of striking"],
+  },
+  "Front kick": {
+    how: "Lift the knee high toward the chest with the foot tucked under, pull the toes back, then snap the lower leg out to strike with the ball of the foot. Push the hip forward at impact. Re-chamber by pulling the knee back before setting the foot down. Targets the stomach, groin, solar plexus or chin.",
+    form: ["Knee lifts first, high and in line with the target", "Toes pulled back hard, ball of the foot hits", "Supporting foot flat, supporting knee slightly bent", "Hip pushes forward at impact", "Lower leg snaps out and back, re-chambering to the same knee position", "Upper body upright, hands up"],
+    mistakes: ["Swinging the straight leg up like a kickball", "Toes pointing forward, kicking with the toes", "Leaning far back", "Dropping the foot straight down without re-chambering", "Supporting heel lifting off the floor", "Hands dropping"],
+  },
+  "Turning kick": {
+    how: "Roundhouse. Lift the knee up and out to the side with the lower leg folded, pivot the supporting foot so the heel points at the target, and let the hip roll over so the knee swings around horizontally. Snap the lower leg out and strike with the instep, or with the ball of the foot with toes pulled back. Re-chamber, then set down.",
+    form: ["Supporting foot pivots fully, heel toward the target", "Knee lifts to the side and points at the target before the snap", "Hip rolls over so the kicking leg is horizontal at impact", "Instep or ball of the foot makes contact, toes pointed for instep", "Re-chamber to the knee-up position before landing", "Upper body stays over the supporting leg, slight lean away, hands up"],
+    mistakes: ["No pivot, kicking with the hip closed", "Knee low, so the kick comes up diagonally like a front kick", "Lower leg swinging as a straight leg", "Leaning away so far that the head drops", "Dropping the foot without re-chambering", "Hands flailing"],
+  },
+  "Side kick": {
+    how: "Lift the knee up and across the body, pivot the supporting foot fully so the heel faces the target, then thrust the leg straight out sideways, striking with the heel and outer edge of the foot. Toes pulled back and angled slightly down, hip driving through, body in one line. Pull the knee back before setting the foot down.",
+    form: ["Supporting heel points at the target at full extension", "Knee chambers high across the body, foot tucked", "Leg extends in a straight line from hip to heel", "Heel is the striking point, toes back and slightly down, foot blade horizontal", "Hip pushes through, body leans slightly away but stays in line with the leg", "Re-chamber before landing"],
+    mistakes: ["Kicking with the foot turned up, hitting with the toes", "No pivot, so it turns into a turning kick", "Knee pointing up instead of across", "Swinging the leg in an arc instead of thrusting", "Leaning over so far the shoulder drops below the hip", "Setting the foot straight down from full extension"],
+  },
+  "Back kick": {
+    how: "Turn your back to the target. Pivot on the front foot and look over the shoulder on the side of the kicking leg, then drive the rear leg straight back along the line of your own body, striking with the heel. Keep the knee of the kicking leg close to the other knee as it travels. Always the rear leg. Re-chamber and land facing the target or continue the turn.",
+    form: ["Look over the shoulder before the leg fires, eyes on the target", "Kicking leg travels straight back, knees brushing past each other", "Heel is the striking point, toes pointing down", "Leg extends in line with the body, hip pushed back into it", "Supporting foot pivots so the heel faces the target", "Upper body stays fairly upright, hands up"],
+    mistakes: ["Kicking without looking, so the kick goes off line", "Leg swinging out to the side, which makes it a spinning side kick", "Knee flaring outward during the travel", "Bending forward at the waist", "Toes turned up", "Pivoting too far or not enough"],
+  },
+  "Hammer kick": {
+    how: "Axe kick. Swing the straight or nearly straight leg up high in front, either on a straight line or arcing out and in, then bring the heel down hard onto the target. Pull the toes back so the heel leads on the way down. The supporting knee stays slightly bent and the hip drives the leg down. Targets the collarbone, head or chest.",
+    form: ["Leg rises high, well above the target, before it comes down", "Heel is the striking point, toes pulled back", "Downward motion is driven by the hip, not just gravity", "Supporting knee slightly bent, supporting foot flat", "Upper body stays upright, hands up", "Land in control, not slamming the foot to the floor"],
+    mistakes: ["Not lifting high enough, so the heel glances", "Toes pointed, striking with the sole", "Supporting knee locked", "Leaning back as the leg rises", "Letting the leg fall instead of driving it"],
+  },
+  "Crescent kick": {
+    how: "The leg swings up in an arc across the body with the knee slightly bent. Inward crescent: the leg swings from outside to inside and strikes with the sole or inside edge of the foot. Outward crescent: from inside to outside, striking with the outer edge. Often done to the open palm as a target in forms, with the palm held in front at face height.",
+    form: ["Knee slightly bent, leg relaxed on the way up and firm at contact", "Arc passes through the target at face or chest height", "Foot angled so the sole or edge, not the toes, makes contact", "Supporting foot pivots slightly, heel stays down", "Hips drive the arc", "Hands up, upper body steady"],
+    mistakes: ["Swinging a dead-straight leg", "Arc too low, hitting the ribs instead of the head", "Leaning back away from the kick", "Supporting heel lifting", "Missing the target hand in forms"],
+  },
+  "Push kick": {
+    how: "A front kick that shoves instead of snapping. Lift the knee high, then drive the whole foot forward and slightly down, striking with the sole or heel to push the opponent away. Lean the upper body back a little and push the hip through. Used to make distance or stop an advance.",
+    form: ["Knee lifts high first, then the foot pushes forward", "Sole or heel makes contact, whole foot flat on the target", "Hip drives through at full extension", "Slight lean back, but the hands stay up", "Supporting foot flat, knee slightly bent", "Re-chamber after the push"],
+    mistakes: ["Snapping the lower leg like a front kick, so it slaps instead of pushes", "Leaning back so far that balance goes", "Pushing with a bent knee that never extends", "Kicking with the toes"],
+  },
+  "Hook kick": {
+    how: "Lift the knee and extend the leg as if for a side kick, aimed slightly past the target, then pull the heel back in a hooking arc so it whips through the target. The hip rotates and the knee bends sharply at the end. Targets the side of the head or jaw. Often chained with a turning kick from the same chamber.",
+    form: ["Chamber and extension look like a side kick, heel passing just outside the target", "Heel is the striking point, toes back", "Hook comes from bending the knee sharply, not swinging the whole leg", "Supporting foot pivoted, heel toward the target", "Hips rotate into the hook", "Re-chamber after contact"],
+    mistakes: ["Swinging the straight leg in a wide arc", "Extending directly at the target so there is no hook", "Hooking with the toes or the sole", "Leaning the body away so far that the kick loses height", "No pivot"],
+  },
+};
+const DESC_KEY = "tkd-drill-descriptions";
+let descCustom = {};
+try { descCustom = JSON.parse(localStorage.getItem(DESC_KEY) || "{}") || {}; } catch (e) { descCustom = {}; }
+// A description is either a structured default {how, form, mistakes} or a plain string the user wrote.
+function descToText(d) {
+  if (!d) return "";
+  if (typeof d === "string") return d;
+  return [d.how, "", "Form checkpoints:", ...d.form.map(x => "- " + x), "", "Common mistakes:", ...d.mistakes.map(x => "- " + x)].join("\n");
+}
+function getDesc(name) { return descCustom[name] !== undefined ? descCustom[name] : (descDefaults[name] || ""); }
+function setDesc(name, text) {
+  if (text === descToText(descDefaults[name] || "")) delete descCustom[name]; else descCustom[name] = text;
+  try { localStorage.setItem(DESC_KEY, JSON.stringify(descCustom)); } catch (e) {}
+}
+// Renders a description as HTML: structured defaults get headed lists, plain text gets paragraphs.
+function descHTML(d) {
+  if (!d) return "";
+  if (typeof d === "string") {
+    return d.split(/\n+/).map(line => {
+      line = line.trim(); if (!line) return "";
+      if (/^- /.test(line)) return `<li>${esc(line.slice(2))}</li>`;
+      if (/:$/.test(line)) return `<h4>${esc(line)}</h4>`;
+      return `<p>${esc(line)}</p>`;
+    }).join("").replace(/(<li>.*?<\/li>)+/g, m => `<ul>${m}</ul>`);
+  }
+  return `<p>${esc(d.how)}</p><h4>Form checkpoints</h4><ul>${d.form.map(x => `<li>${esc(x)}</li>`).join("")}</ul><h4>Common mistakes</h4><ul>${d.mistakes.map(x => `<li>${esc(x)}</li>`).join("")}</ul>`;
+}
+
+const groups = [
+  { key: "stances", title: "Stances", items: [...defaults.stances] },
+  { key: "blocks",  title: "Blocks",  items: [...defaults.blocks] },
+  { key: "punches", title: "Strikes", items: [...defaults.punches] },
+  { key: "kicks",   title: "Kicks",   items: [...defaults.kicks] },
+];
+
+// enabled[key] is a Set of item names currently in the pool
+const enabled = {};
+groups.forEach(g => enabled[g.key] = new Set(g.items));
+
+const STORE_KEY = "tkd-drill-pool-v2";
+function loadPool() {
+  try {
+    const raw = localStorage.getItem(STORE_KEY);
+    if (!raw) return;
+    const saved = JSON.parse(raw);
+    groups.forEach(g => {
+      const s = saved[g.key];
+      if (!s) return;
+      if (Array.isArray(s.items) && s.items.length) g.items = s.items.slice();
+      if (Array.isArray(s.enabled)) enabled[g.key] = new Set(s.enabled.filter(n => g.items.includes(n)));
+    });
+  } catch (e) {}
+}
+function savePool() {
+  try {
+    const out = {};
+    groups.forEach(g => out[g.key] = { items: g.items, enabled: [...enabled[g.key]] });
+    localStorage.setItem(STORE_KEY, JSON.stringify(out));
+  } catch (e) {}
+}
+loadPool();
+
+// Taegeuk forms, in the order they are performed. Lead leg is named for back and cat stances.
+const formDefaults = [
+  { name: "Taegeuk 1 · Il Jang", steps: [
+    "Turn left. Left walking stance, left low block",
+    "Step forward. Right walking stance, right punch",
+    "Turn around to the right. Right walking stance, right low block",
+    "Step forward. Left walking stance, left punch",
+    "Turn left. Left front stance, left low block",
+    "Same stance. Right reverse punch",
+    "Turn right. Right walking stance, left inside block",
+    "Step forward. Left walking stance, right reverse punch",
+    "Turn around to the left. Left walking stance, right inside block",
+    "Step forward. Right walking stance, left reverse punch",
+    "Turn right. Right front stance, right low block",
+    "Same stance. Left reverse punch",
+    "Turn left. Left walking stance, left high block",
+    "Right front kick. Land right walking stance, right punch",
+    "Turn around to the right. Right walking stance, right high block",
+    "Left front kick. Land left walking stance, left punch",
+    "Turn right. Left front stance, left low block",
+    "Step forward. Right front stance, right punch. Kihap",
+    "Turn around to the left. Ready stance",
+  ]},
+  { name: "Taegeuk 2 · Ee Jang", steps: [
+    "Turn left. Left walking stance, left low block",
+    "Step forward. Right front stance, right punch",
+    "Turn around to the right. Right walking stance, right low block",
+    "Step forward. Left front stance, left punch",
+    "Turn left. Left walking stance, right inside block",
+    "Step forward. Right walking stance, left inside block",
+    "Turn left. Left walking stance, left low block",
+    "Right front kick. Land right front stance, right high punch",
+    "Turn around to the right. Right walking stance, right low block",
+    "Left front kick. Land left front stance, left high punch",
+    "Turn left. Left walking stance, left high block",
+    "Step forward. Right walking stance, right high block",
+    "Turn left, all the way around. Left walking stance, right inside block",
+    "Turn around to the right. Right walking stance, left inside block",
+    "Turn left. Left walking stance, left low block",
+    "Right front kick. Land right walking stance, right punch",
+    "Left front kick. Land left walking stance, left punch",
+    "Right front kick. Land right walking stance, right punch. Kihap",
+    "Turn around to the left. Ready stance",
+  ]},
+  { name: "Taegeuk 3 · Sam Jang", steps: [
+    "Turn left. Left walking stance, left low block",
+    "Right front kick. Land right front stance, double punch, right then left",
+    "Turn around to the right. Right walking stance, right low block",
+    "Left front kick. Land left front stance, double punch, left then right",
+    "Turn left. Left walking stance, right knife hand strike to the neck",
+    "Step forward. Right walking stance, left knife hand strike to the neck",
+    "Turn left. Left leg forward, back stance, left knife hand block",
+    "Shift forward. Left front stance, right reverse punch",
+    "Turn around to the right. Right leg forward, back stance, right knife hand block",
+    "Shift forward. Right front stance, left reverse punch",
+    "Turn left. Left walking stance, right inside block",
+    "Step forward. Right walking stance, left inside block",
+    "Turn left, all the way around. Left walking stance, left low block",
+    "Right front kick. Land right front stance, double punch, right then left",
+    "Turn around to the right. Right walking stance, right low block",
+    "Left front kick. Land left front stance, double punch, left then right",
+    "Turn right. Left walking stance, left low block, right reverse punch",
+    "Step forward. Right walking stance, right low block, left reverse punch",
+    "Left front kick. Land left walking stance, left low block, right reverse punch",
+    "Right front kick. Land right walking stance, right low block, left reverse punch. Kihap",
+    "Turn around to the left. Ready stance",
+  ]},
+  { name: "Taegeuk 4 · Sa Jang", steps: [
+    "Turn left. Left leg forward, back stance, double knife hand block",
+    "Step forward. Right front stance, right spear hand",
+    "Turn around to the right. Right leg forward, back stance, double knife hand block",
+    "Step forward. Left front stance, left spear hand",
+    "Turn left. Left front stance, left high knife hand block, right knife hand strike to the neck",
+    "Right front kick. Land right front stance, left reverse punch",
+    "Left side kick, then right side kick. Land right leg forward, back stance, double knife hand block",
+    "Turn left, all the way around. Left leg forward, back stance, left outside block",
+    "Right front kick, bring it back. Back stance, right inside block",
+    "Turn around to the right. Right leg forward, back stance, right outside block",
+    "Left front kick, bring it back. Back stance, left inside block",
+    "Turn left. Left front stance, left high knife hand block, right knife hand strike to the neck",
+    "Right front kick. Land right front stance, right backfist",
+    "Turn left. Left walking stance, left inside block, right reverse punch",
+    "Turn around to the right. Right walking stance, right inside block, left reverse punch",
+    "Turn left. Left front stance, left inside block, double punch, right then left",
+    "Step forward. Right front stance, right inside block, double punch, left then right. Kihap",
+    "Turn around to the left. Ready stance",
+  ]},
+  { name: "Taegeuk 5 · Oh Jang", steps: [
+    "Turn left. Left front stance, left low block",
+    "Pull the left foot in, feet together. Left hammer fist, downward",
+    "Turn right. Right front stance, right low block",
+    "Pull the right foot in, feet together. Right hammer fist, downward",
+    "Turn left. Left front stance, left inside block, then right inside block",
+    "Right front kick. Land right front stance, right backfist, then left inside block",
+    "Left front kick. Land left front stance, left backfist, then right inside block",
+    "Step forward. Right front stance, right backfist. Kihap",
+    "Turn left, all the way around. Left leg forward, back stance, left knife hand block",
+    "Step forward. Right front stance, right elbow across",
+    "Turn around to the right. Right leg forward, back stance, right knife hand block",
+    "Step forward. Left front stance, left elbow across",
+    "Turn left. Left front stance, left low block, then right inside block",
+    "Right front kick. Land right front stance, right low block, then left inside block",
+    "Turn left. Left front stance, left high block",
+    "Right side kick. Land right front stance, left elbow to the palm",
+    "Turn around to the right. Right front stance, right high block",
+    "Left side kick. Land left front stance, right elbow to the palm",
+    "Turn left. Left front stance, left low block, then right inside block",
+    "Right front kick, jump forward. Cross stance, right backfist. Kihap",
+    "Turn around to the left. Ready stance",
+  ]},
+  { name: "Taegeuk 6 · Yuk Jang", steps: [
+    "Turn left. Left front stance, left low block",
+    "Right front kick, bring it back. Left leg forward, back stance, right outside block",
+    "Turn right. Right front stance, right low block",
+    "Left front kick, bring it back. Right leg forward, back stance, left outside block",
+    "Turn left. Left front stance, right knife hand high block",
+    "Right turning kick",
+    "Set the foot down, turn left. Left front stance, left high outside block, right reverse punch",
+    "Right front kick. Land right front stance, left reverse punch",
+    "Turn around to the right. Right front stance, right high outside block, left reverse punch",
+    "Left front kick. Land left front stance, right reverse punch",
+    "Bring the left foot in, face the front. Parallel stance, double low block, slowly",
+    "Step forward. Right front stance, left knife hand high block",
+    "Left turning kick",
+    "Set the foot down, turn right. Right front stance, right low block",
+    "Left front kick, bring it back. Right leg forward, back stance, left outside block",
+    "Turn left. Left front stance, left low block",
+    "Right front kick, bring it back. Left leg forward, back stance, right outside block",
+    "Turn to face the front. Left leg forward, back stance, double knife hand block",
+    "Step back. Right leg forward, back stance, double knife hand block",
+    "Step back. Left front stance, left palm block, right reverse punch",
+    "Step back. Right front stance, right palm block, left reverse punch",
+    "Bring the left foot in. Ready stance",
+  ]},
+  { name: "Taegeuk 7 · Chil Jang", steps: [
+    "Turn left. Left leg forward, cat stance, right palm block",
+    "Right front kick, bring it back. Cat stance, left inside block",
+    "Turn around to the right. Right leg forward, cat stance, left palm block",
+    "Left front kick, bring it back. Cat stance, right inside block",
+    "Turn left. Left leg forward, back stance, double knife hand low block",
+    "Step forward. Right leg forward, back stance, double knife hand low block",
+    "Turn left. Left leg forward, cat stance, left palm block, then right backfist",
+    "Turn around to the right. Right leg forward, cat stance, right palm block, then left backfist",
+    "Turn left, feet together. Covered fist at the chin, slowly",
+    "Step forward. Left front stance, scissors block, then switch",
+    "Step forward. Right front stance, scissors block, then switch",
+    "Turn left, all the way around. Left front stance, wedge block",
+    "Right knee strike, jump forward. Cross stance, double upper cut. Step the left foot back, right front stance, low X block",
+    "Turn around to the right. Right front stance, wedge block",
+    "Left knee strike, jump forward. Cross stance, double upper cut. Step the right foot back, left front stance, low X block",
+    "Turn left. Left walking stance, left backfist, sideways",
+    "Right crescent kick to the palm. Land horse stance, right elbow across",
+    "Step up. Right walking stance, right backfist, sideways",
+    "Left crescent kick to the palm. Land horse stance, left elbow across",
+    "Horse stance, left knife hand side block",
+    "Step through. Horse stance, right side punch. Kihap",
+    "Bring the left foot back. Ready stance",
+  ]},
+  { name: "Taegeuk 8 · Pal Jang", steps: [
+    "Step forward. Left leg forward, back stance, augmented outside block. Shift to left front stance, right reverse punch",
+    "Jump front kick. Kihap. Land left front stance, left inside block, double punch, right then left",
+    "Step forward. Right front stance, right punch",
+    "Turn left. Right front stance, right single mountain block",
+    "Turn around, shift. Left front stance, right upper cut",
+    "Cross step and turn. Left front stance, left single mountain block",
+    "Turn around, shift. Right front stance, left upper cut",
+    "Turn left. Left leg forward, back stance, double knife hand block. Shift to left front stance, right reverse punch",
+    "Right front kick, bring it back and step back. Right leg forward, cat stance, right palm block",
+    "Turn left. Left leg forward, cat stance, double knife hand block",
+    "Left front kick. Land left front stance, right reverse punch. Pull back to cat stance, left palm block",
+    "Turn around to the right. Right leg forward, cat stance, double knife hand block",
+    "Right front kick. Land right front stance, left reverse punch. Pull back to cat stance, right palm block",
+    "Turn right. Left leg forward, back stance, double knife hand low block",
+    "Left front kick, then right jump front kick. Land right front stance, right inside block, left reverse punch. Kihap",
+    "Turn left, all the way around. Left leg forward, back stance, left knife hand block. Shift to left front stance, right elbow, right backfist, left punch",
+    "Turn around to the right. Right leg forward, back stance, right knife hand block. Shift to right front stance, left elbow, left backfist, right punch",
+    "Bring the left foot in. Ready stance",
+  ]},
+];
+
+const forms = formDefaults.map(f => ({ name: f.name, steps: f.steps.slice() }));
+const FORMS_KEY = "tkd-drill-forms-v1";
+function loadForms() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(FORMS_KEY) || "null");
+    if (!Array.isArray(saved)) return;
+    saved.forEach((steps, i) => { if (forms[i] && Array.isArray(steps) && steps.length) forms[i].steps = steps; });
+  } catch (e) {}
+}
+function saveForms() {
+  try { localStorage.setItem(FORMS_KEY, JSON.stringify(forms.map(f => f.steps))); } catch (e) {}
+}
+loadForms();
+
+let appMode = "random";
+let formIndex = 0;
+let stepIndex = 0;
+
+let legMode = "alternate";
+let callSide = true;
+let interval = 3;
+let running = false;
+let count = 0;
+let timer = null;
+let lastLeg = "Right";
+let lastCombo = "";
+
+const el = id => document.getElementById(id);
+const lineLeg = el("line-leg"), lineStance = el("line-stance"), lineTech = el("line-tech"), lineSide = el("line-side");
+const drillCount = el("drill-count"), ringFill = el("ring-fill"), tempoDisp = el("tempo-display");
+const tempoSlider = el("tempo-slider"), playBtn = el("play-btn"), playIcon = el("play-icon");
+const sessionBadge = el("session-badge"), idleHint = el("idle-hint");
+
+const speechOk = "speechSynthesis" in window;
+if (!speechOk) el("no-speech-warn").hidden = false;
+
+const CIRC = 251.3;
+const rand = arr => arr[Math.floor(Math.random() * arr.length)];
+
+// The random drill is a sequence: each call moves you from where you are to the
+// next position. State is the current stance and which leg leads ("" when square).
+const isSquare = s => /horse|parallel|ready|closed|attention/i.test(s);
+let cur = { stance: "Ready stance", lead: "" };
+function resetSequence() { cur = { stance: "Ready stance", lead: "" }; lastLeg = "Right"; }
+const other = leg => (leg === "Left" ? "Right" : "Left");
+
+// Lead leg for the next asymmetric stance, honouring the lead-leg setting.
+function nextLead(prevLead) {
+  if (legMode === "left") return "Left";
+  if (legMode === "right") return "Right";
+  if (legMode === "random") return Math.random() < 0.5 ? "Left" : "Right";
+  if (prevLead) return other(prevLead);
+  lastLeg = other(lastLeg);
+  return lastLeg;
+}
+
+function poolReady() {
+  const techCats = ["blocks", "punches", "kicks"].filter(k => enabled[k].size > 0);
+  return enabled.stances.size > 0 && techCats.length > 0;
+}
+
+function buildCombo() {
+  const cats = ["blocks", "punches", "kicks"].filter(k => enabled[k].size > 0);
+  if (cats.length === 0 || enabled.stances.size === 0) return null;
+  const stances = [...enabled.stances];
+  const cat = rand(cats);
+  let tech = rand([...enabled[cat]]);
+  const fromSquare = isSquare(cur.stance) || !cur.lead;
+  let cue = "", stance = "", lead = "", side = "";
+
+  if (cat === "kicks") {
+    // Kick from where you are, then land.
+    const rearOnly = /back kick|spinning|spin/i.test(tech);
+    const fixed = legMode === "left" ? "Left" : legMode === "right" ? "Right" : "";
+    let kickLeg;
+    if (fromSquare) kickLeg = fixed || (Math.random() < 0.5 ? "Left" : "Right");
+    else if (rearOnly) kickLeg = other(cur.lead);
+    else kickLeg = Math.random() < 0.5 ? cur.lead : other(cur.lead);
+    if (callSide) side = fromSquare ? `${kickLeg} leg` : (kickLeg === cur.lead ? "Front leg" : "Rear leg");
+    var absSide = `${kickLeg} leg`;
+    // In a fixed-leg mode, landing forward on the other leg would break the setting, so set it back.
+    let landForward = fromSquare || Math.random() < 0.65;
+    if (!fromSquare && fixed && kickLeg !== fixed) landForward = false;
+    if (landForward) {
+      stance = rand(stances);
+      if (isSquare(stance)) { cue = "Land in"; lead = ""; }
+      else { cue = "Land forward"; lead = kickLeg; }
+    } else {
+      cue = "Set it back"; stance = cur.stance; lead = cur.lead;
+    }
+  } else {
+    // Hand technique: move into the next stance, then execute.
+    stance = rand(stances);
+    if (isSquare(stance)) {
+      lead = "";
+      cue = isSquare(cur.stance) ? "Same stance" : "Step into";
+      if (/reverse punch/i.test(tech)) tech = "Punch";
+      if (callSide) side = (Math.random() < 0.5 ? "Left" : "Right") + " hand";
+      var absSide = side;
+    } else {
+      const r = Math.random();
+      const fixed = legMode === "left" ? "Left" : legMode === "right" ? "Right" : "";
+      const leadOk = !fixed || cur.lead === fixed;
+      if (!fromSquare && leadOk && stance === cur.stance && r < 0.3) { cue = "Same stance"; lead = cur.lead; }
+      else if (!fromSquare && leadOk && r < 0.55 && legMode !== "alternate") { cue = "Shift to"; lead = cur.lead; }
+      else {
+        lead = nextLead(fromSquare ? "" : cur.lead);
+        if (fromSquare) cue = "Step into";
+        else if (lead !== cur.lead) cue = Math.random() < 0.8 ? "Step forward" : "Step back";
+        else cue = "Shift to";
+      }
+      if (callSide && !/reverse punch/i.test(tech)) side = (Math.random() < 0.5 ? "Front" : "Rear") + " hand";
+      var absSide = side === "Front hand" ? `${lead} hand` : side === "Rear hand" ? `${other(lead)} hand` : side;
+    }
+  }
+  cur = { stance, lead };
+  return { cue, stance, lead, tech, side, absSide, isKick: cat === "kicks" };
+}
+
+let rate = 1.0;
+let speakToken = 0;
+let chosenVoice = null;
+
+// Voices: list the English ones, best-sounding first, and remember the pick.
+const VOICE_KEY = "tkd-drill-voice";
+const voiceSelect = el("voice-select");
+
+function voiceScore(v) {
+  const n = v.name.toLowerCase();
+  let s = 0;
+  if (/natural|neural|premium|enhanced|siri|wavenet|online/.test(n)) s += 30;
+  if (/google/.test(n)) s += 15;
+  if (/samantha|daniel|karen|moira|tessa|ava|zoe|allison|susan|oliver/.test(n)) s += 10;
+  if (/compact|espeak|robot|novelty|bad news|cellos|zarvox|whisper|bubbles|bells|boing|trinoids|deranged|albert|fred|junior|ralph|kathy|wobble|organ|jester|rocko|shelley|superstar|grandma|grandpa|eddy|flo|reed|sandy/.test(n)) s -= 40;
+  if (v.localService === false) s += 5;
+  if (/^en-us/i.test(v.lang)) s += 4;
+  else if (/^en/i.test(v.lang)) s += 2;
+  if (v.default) s += 1;
+  return s;
+}
+
+function loadVoices() {
+  if (!speechOk) { voiceSelect.innerHTML = '<option>Not available</option>'; return; }
+  const all = window.speechSynthesis.getVoices();
+  if (!all.length) return;
+  let list = all.filter(v => /^en/i.test(v.lang));
+  if (!list.length) list = all;
+  list.sort((a, b) => voiceScore(b) - voiceScore(a));
+  let savedName = null;
+  try { savedName = localStorage.getItem(VOICE_KEY); } catch (e) {}
+  voiceSelect.innerHTML = "";
+  list.forEach(v => {
+    const o = document.createElement("option");
+    o.value = v.name;
+    const tag = /natural|neural|premium|enhanced|siri|wavenet|online/i.test(v.name) ? " ★" : "";
+    o.textContent = `${v.name.replace(/^Microsoft |^Google |\(.*?\)/g, "").trim()} (${v.lang})${tag}`;
+    voiceSelect.appendChild(o);
+  });
+  chosenVoice = list.find(v => v.name === savedName) || list[0];
+  voiceSelect.value = chosenVoice.name;
+}
+
+voiceSelect.addEventListener("change", () => {
+  const v = window.speechSynthesis.getVoices().find(x => x.name === voiceSelect.value);
+  if (v) { chosenVoice = v; try { localStorage.setItem(VOICE_KEY, v.name); } catch (e) {} }
+});
+
+el("test-voice").addEventListener("click", () => {
+  if (running) return;
+  speak("Left leg forward, front stance, low block");
+});
+
+if (speechOk) {
+  loadVoices();
+  window.speechSynthesis.onvoiceschanged = loadVoices;
+}
+
+// Speaks the text and calls onDone exactly once when the voice has finished.
+// A safety timer covers browsers that never fire onend.
+function speak(text, onDone) {
+  const token = ++speakToken;
+  let finished = false;
+  const done = () => {
+    if (finished || token !== speakToken) return;
+    finished = true;
+    onDone && onDone();
+  };
+  const words = text.split(/\s+/).length;
+  const estMs = (words * 420 + 600) / rate;
+  if (!speechOk) { setTimeout(done, estMs); return; }
+  window.speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(text);
+  u.rate = rate;
+  u.pitch = 1;
+  if (chosenVoice) { u.voice = chosenVoice; u.lang = chosenVoice.lang; }
+  u.onend = done;
+  u.onerror = done;
+  window.speechSynthesis.speak(u);
+  setTimeout(done, estMs * 2 + 2000);
+}
+
+function flashLines() {
+  [lineLeg, lineStance, lineTech, lineSide].forEach(n => { n.classList.remove("flash"); void n.offsetWidth; n.classList.add("flash"); });
+}
+
+let cuesOn = false;
+
+let sideMode = "lr"; // "lr" | "fr" | "off"
+function callText(c) {
+  let sideWord = "";
+  if (sideMode === "lr" && c.side) sideWord = c.absSide || c.side;
+  else if (sideMode === "fr" && c.side) sideWord = c.side;
+  const techCall = sideWord ? `${sideWord} ${c.tech.toLowerCase()}` : c.tech;
+  const stanceCall = c.lead ? `${c.lead} leg forward, ${c.stance.toLowerCase()}` : c.stance;
+  if (c.isKick) {
+    const setBack = c.cue === "Set it back";
+    const landWord = setBack ? "Set it back" : "Land";
+    return {
+      top: "Kick",
+      stance: `${landWord}: ${stanceCall.charAt(0).toLowerCase()}${stanceCall.slice(1)}`,
+      tech: techCall,
+      kick: true,
+      spoken: `${techCall}, ${landWord.toLowerCase()}, ${stanceCall}`,
+    };
+  }
+  return {
+    top: c.cue,
+    stance: stanceCall,
+    tech: techCall,
+    spoken: cuesOn ? `${c.cue}, ${stanceCall}, ${techCall}` : `${stanceCall}, ${techCall}`,
+  };
+}
+
+let currentCall = null;   // the random call on screen
+let currentStepText = ""; // the form step on screen
+
+function show(c, onDone) {
+  currentCall = c;
+  flashLines();
+  const t = callText(c);
+  document.querySelector(".command").classList.toggle("kick", !!t.kick);
+  lineLeg.textContent = t.top;
+  lineStance.textContent = t.stance;
+  lineTech.textContent = t.tech;
+  lineSide.textContent = "";
+  speak(t.spoken, onDone);
+}
+
+const commandBox = document.querySelector(".command");
+const stepBar = el("step-bar"), stepBarFill = el("step-bar-fill");
+
+function showStep(i, onDone) {
+  const f = forms[formIndex];
+  const total = f.steps.length;
+  flashLines();
+  currentStepText = f.steps[i];
+  lineLeg.textContent = `${f.name}  ·  ${i + 1} of ${total}`;
+  lineTech.textContent = f.steps[i];
+  stepBarFill.style.width = `${((i + 1) / total) * 100}%`;
+  speak(f.steps[i], onDone);
+}
+
+let ringAnim = null;
+function startRing() {
+  cancelAnimationFrame(ringAnim);
+  const start = performance.now();
+  const dur = interval * 1000;
+  function frame(now) {
+    const p = Math.min((now - start) / dur, 1);
+    ringFill.style.strokeDashoffset = CIRC * (1 - p);
+    if (p < 1 && running) ringAnim = requestAnimationFrame(frame);
+  }
+  ringFill.style.strokeDashoffset = CIRC;
+  ringAnim = requestAnimationFrame(frame);
+}
+
+// After the voice finishes, the ring counts down the pause, then the next call fires.
+function afterSpeech() {
+  if (!running) return;
+  startRing();
+  clearTimeout(timer);
+  timer = setTimeout(tick, interval * 1000);
+}
+
+// Random-mode history: every call is kept with the body state it leaves you in,
+// so Back/Next replay the same sequence and generation resumes from the right place.
+let history = [];   // { call, after: {stance, lead} }
+let histPos = -1;   // index of the call on screen
+
+function randomCallAt(pos) {
+  // Reuse an existing call when stepping through history; generate when at the end.
+  if (pos < history.length) {
+    histPos = pos;
+    cur = { ...history[pos].after };
+    return history[pos].call;
+  }
+  const c = buildCombo();
+  if (!c) return null;
+  history.push({ call: c, after: { ...cur } });
+  histPos = history.length - 1;
+  return c;
+}
+
+function tick() {
+  if (!running) return;
+  ringFill.style.strokeDashoffset = CIRC;
+  if (appMode === "forms") {
+    const f = forms[formIndex];
+    if (stepIndex >= f.steps.length) { stopDrill(); sessionBadge.textContent = "Form done"; return; }
+    count++;
+    drillCount.textContent = count;
+    sessionBadge.textContent = `#${count}`;
+    showStep(stepIndex, afterSpeech);
+    stepIndex++;
+    return;
+  }
+  const c = randomCallAt(histPos + 1);
+  if (!c) { stopDrill(); return; }
+  count++;
+  drillCount.textContent = count;
+  sessionBadge.textContent = `#${count}`;
+  show(c, afterSpeech);
+}
+
+function interrupt() {
+  speakToken++;
+  clearTimeout(timer);
+  cancelAnimationFrame(ringAnim);
+  ringFill.style.strokeDashoffset = CIRC;
+  if (speechOk) window.speechSynthesis.cancel();
+  idleHint.hidden = true;
+}
+
+// Form navigation. stepIndex always points at the NEXT step to be called,
+// so the step on screen is stepIndex - 1.
+// When the user navigates while paused, the call on screen hasn't been "done" yet,
+// so the next Play should start by calling it rather than the one after.
+let replayOnPlay = false;
+
+function jumpTo(i) {
+  const f = forms[formIndex];
+  i = Math.max(0, Math.min(i, f.steps.length - 1));
+  interrupt();
+  stepIndex = i;
+  if (running) {
+    tick();
+  } else {
+    showStep(i, null);
+    stepIndex = i + 1;
+    replayOnPlay = true;
+    sessionBadge.textContent = "Paused";
+  }
+}
+
+// Random navigation. pos is the history index to show; past the end generates a new call.
+function jumpRandom(pos) {
+  if (!poolReady()) return;
+  pos = Math.max(0, Math.min(pos, history.length));
+  interrupt();
+  if (running) { histPos = pos - 1; tick(); return; }
+  const c = randomCallAt(pos);
+  if (!c) return;
+  show(c, null);
+  replayOnPlay = true;
+  sessionBadge.textContent = `${histPos + 1} of ${history.length}`;
+}
+
+function restartRandom() {
+  interrupt();
+  replayOnPlay = false;
+  history = []; histPos = -1; resetSequence();
+  if (running) { tick(); }
+  else { applyMode(); sessionBadge.textContent = "Ready"; }
+}
+
+el("step-nav").addEventListener("click", e => { const b = e.target.closest("button"); if (b) b.blur(); });
+el("nav-back").addEventListener("click", () => appMode === "forms" ? jumpTo(stepIndex - 2) : jumpRandom(histPos - 1));
+el("nav-again").addEventListener("click", () => appMode === "forms" ? jumpTo(stepIndex - 1) : jumpRandom(Math.max(0, histPos)));
+el("nav-next").addEventListener("click", () => appMode === "forms" ? jumpTo(stepIndex) : jumpRandom(histPos + 1));
+el("nav-restart").addEventListener("click", () => appMode === "forms" ? jumpTo(0) : restartRandom());
+
+function startDrill() {
+  if (running) return;
+  if (appMode === "random" && !poolReady()) { idleHint.hidden = false; idleHint.textContent = "Pick at least one stance and one technique."; return; }
+  if (appMode === "forms") {
+    if (replayOnPlay) stepIndex = Math.max(0, stepIndex - 1);
+    if (stepIndex >= forms[formIndex].steps.length) stepIndex = 0;
+    stepBar.hidden = false;
+  } else if (history.length === 0) {
+    resetSequence();
+  } else if (replayOnPlay) {
+    histPos = Math.max(-1, histPos - 1);
+  }
+  replayOnPlay = false;
+  running = true;
+  idleHint.hidden = true;
+  playBtn.classList.add("running");
+  playIcon.innerHTML = '<rect x="5" y="4" width="4" height="16"/><rect x="15" y="4" width="4" height="16"/>';
+  playBtn.setAttribute("aria-label", "Stop drill");
+  tick();
+}
+
+function stopDrill() {
+  if (!running) return;
+  running = false;
+  speakToken++;
+  clearTimeout(timer);
+  cancelAnimationFrame(ringAnim);
+  ringFill.style.strokeDashoffset = CIRC;
+  if (speechOk) window.speechSynthesis.cancel();
+  playBtn.classList.remove("running");
+  playIcon.innerHTML = '<polygon points="5,3 19,12 5,21"/>';
+  playBtn.setAttribute("aria-label", "Start drill");
+  sessionBadge.textContent = `${count} done`;
+}
+
+playBtn.addEventListener("click", () => running ? stopDrill() : startDrill());
+
+tempoSlider.addEventListener("input", () => {
+  interval = parseFloat(tempoSlider.value);
+  tempoDisp.textContent = `${interval}s`;
+});
+
+const rateSlider = el("rate-slider"), rateDisp = el("rate-display");
+rateSlider.addEventListener("input", () => {
+  rate = parseFloat(rateSlider.value);
+  rateDisp.textContent = `${rate.toFixed(1)}×`;
+});
+
+// Technique picker
+const picker = el("picker"), pickerBody = el("picker-body"), poolSummary = el("pool-summary");
+
+function updateSummary() {
+  const total = groups.reduce((n, g) => n + enabled[g.key].size, 0);
+  const all = groups.reduce((n, g) => n + g.items.length, 0);
+  poolSummary.textContent = total === all ? `All ${all}` : `${total} of ${all}`;
+}
+
+function renderPicker() {
+  pickerBody.innerHTML = "";
+  groups.forEach(g => {
+    const sec = document.createElement("section");
+    const head = document.createElement("div");
+    head.className = "group-head";
+    head.innerHTML = `<span class="group-title">${g.title}</span>
+      <span class="group-tools">
+        <button class="link-btn" data-all="${g.key}">All</button>
+        <button class="link-btn" data-none="${g.key}">None</button>
+        <button class="link-btn" data-reset="${g.key}">Reset</button>
+      </span>`;
+    sec.appendChild(head);
+    const list = document.createElement("div");
+    list.className = "check-list";
+    g.items.forEach(name => {
+      const id = `chk-${g.key}-${name.replace(/\W+/g, "-").toLowerCase()}`;
+      const on = enabled[g.key].has(name);
+      const row = document.createElement("div");
+      row.className = "check-row" + (on ? "" : " off");
+      row.innerHTML = `<input type="checkbox" id="${id}" data-group="${g.key}" data-name="${esc(name)}" ${on ? "checked" : ""}>
+        <label for="${id}">${esc(name)}</label>
+        <button class="info-btn" data-info="${esc(name)}" aria-label="About ${esc(name)}">i</button>
+        <button class="remove-btn" data-remove="${g.key}" data-name="${esc(name)}" aria-label="Remove ${esc(name)}">×</button>`;
+      list.appendChild(row);
+    });
+    sec.appendChild(list);
+    const add = document.createElement("form");
+    add.className = "add-row";
+    add.dataset.group = g.key;
+    add.innerHTML = `<input type="text" id="add-${g.key}" placeholder="Add a ${g.title.toLowerCase().replace(/s$/, "")}" autocomplete="off">
+      <button type="submit" class="add-btn">Add</button>`;
+    sec.appendChild(add);
+    pickerBody.appendChild(sec);
+  });
+  updateSummary();
+}
+
+function esc(s) { return s.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;"); }
+
+pickerBody.addEventListener("submit", e => {
+  e.preventDefault();
+  const form = e.target.closest(".add-row"); if (!form) return;
+  const input = form.querySelector("input");
+  const name = input.value.trim().replace(/\s+/g, " ");
+  if (!name) return;
+  const g = groups.find(x => x.key === form.dataset.group);
+  const pretty = name[0].toUpperCase() + name.slice(1);
+  if (!g.items.some(n => n.toLowerCase() === pretty.toLowerCase())) {
+    g.items.push(pretty);
+    enabled[g.key].add(pretty);
+    savePool(); renderPicker();
+    const next = document.getElementById(`add-${g.key}`);
+    if (next) next.focus();
+  } else {
+    input.value = "";
+  }
+});
+
+pickerBody.addEventListener("change", e => {
+  const cb = e.target;
+  if (cb.type !== "checkbox") return;
+  const set = enabled[cb.dataset.group];
+  cb.checked ? set.add(cb.dataset.name) : set.delete(cb.dataset.name);
+  cb.closest(".check-row").classList.toggle("off", !cb.checked);
+  savePool(); updateSummary();
+});
+
+// Description popup
+const infoPop = el("info-pop"), infoTitle = el("info-title"), infoText = el("info-text"), infoEdit = el("info-edit");
+let infoName = "";
+function openInfo(name) {
+  infoName = name;
+  infoTitle.textContent = name;
+  const d = getDesc(name);
+  infoText.innerHTML = d ? descHTML(d) : "No description yet. Tap Edit to write one.";
+  infoText.hidden = false;
+  infoEdit.hidden = true;
+  infoSections.hidden = true;
+  el("info-edit-btn").hidden = false;
+  el("info-edit-btn").textContent = "Edit";
+  infoPop.hidden = false;
+}
+function closeInfo() {
+  if (!infoEdit.hidden && infoName) setDesc(infoName, infoEdit.value.trim());
+  infoPop.hidden = true;
+}
+el("info-edit-btn").addEventListener("click", () => {
+  if (infoEdit.hidden) {
+    infoEdit.value = descToText(getDesc(infoName));
+    infoEdit.hidden = false;
+    infoText.hidden = true;
+    el("info-edit-btn").textContent = "Save";
+    infoEdit.focus();
+  } else {
+    setDesc(infoName, infoEdit.value.trim());
+    openInfo(infoName);
+  }
+});
+el("info-close").addEventListener("click", closeInfo);
+
+// Details for the call on screen: one section per stance and technique involved.
+const infoSections = el("info-sections");
+const allNames = () => groups.flatMap(g => g.items.map(n => ({ name: n, kind: g.title.replace(/s$/, "") })));
+
+function sectionHTML(kind, name, extra) {
+  const d = getDesc(name);
+  return `<div class="pop-section"><h3>${esc(kind)}${extra ? " · " + esc(extra) : ""}</h3>
+    <div class="pop-name">${esc(name)}</div>
+    ${d ? descHTML(d) : `<p class="empty">No description yet. Open the pool, tap ⓘ next to ${esc(name)}, and write one.</p>`}</div>`;
+}
+
+// How to get from one stance to another without stepping (same lead leg).
+const shiftNotes = {
+  "Front stance>Back stance": "Keep the feet where they are. Push the weight back onto the rear leg until it carries about 70 percent, turn the rear foot out to 90 degrees and let the hips turn half away from the target. The front knee straightens a little.",
+  "Back stance>Front stance": "Keep the feet where they are. Drive the weight forward onto the front leg, square the hips to the front, turn the rear foot in to about 30 degrees and straighten the rear leg. Slide the front foot forward a little if the stance needs more length.",
+  "Front stance>Walking stance": "Pull the rear foot up until the stance is only a natural step long, straighten both knees and even out the weight. Keep the feet a shoulder width apart sideways.",
+  "Walking stance>Front stance": "Slide the front foot forward and bend the front knee until the shin is vertical, locking the rear leg straight and keeping the rear heel down. The weight moves to about 60 percent on the front leg.",
+  "Back stance>Walking stance": "Bring the weight forward to even, turn the rear foot in to about 30 degrees and straighten both knees. Square the hips to the front.",
+  "Walking stance>Back stance": "Sit back onto the rear leg, bend the rear knee deeply and turn the rear foot out to 90 degrees so the feet form an L. The front foot stays pointing forward and goes light.",
+  "Back stance>Cat stance": "Draw the front foot in toward the rear foot, lift the front heel so only the ball touches, and sink a little more onto the rear leg. The two stances share the same rear-weighted shape, so this is a small adjustment.",
+  "Cat stance>Back stance": "Slide the front foot forward to lengthen the stance, lower the front heel to the floor and let a little weight move into it. The rear foot stays at 90 degrees.",
+  "Front stance>Cat stance": "Shift the weight back onto the rear leg, bend the rear knee and draw the front foot in until it is only a short step ahead, heel raised. The hips turn slightly away.",
+  "Cat stance>Front stance": "Drive the front foot forward into a long step, drop the heel and bend the front knee hard, straightening the rear leg behind you. The weight moves from the rear leg to the front.",
+  "Walking stance>Cat stance": "Sit back onto the rear leg, bend it, and pull the front foot in a little with the heel raised. The weight goes almost entirely to the rear.",
+  "Cat stance>Walking stance": "Lower the front heel, push the front foot forward to a natural step and even out the weight with both knees nearly straight.",
+  "Horse stance>Front stance": "Pivot on both feet toward the new lead side and turn the hips 90 degrees so you face along the line of your feet. The foot on the new lead side becomes the front foot; bend its knee and straighten the rear leg.",
+  "Horse stance>Back stance": "Pivot toward the new lead side, turning the hips only 45 degrees so you face half away. The lead-side foot points forward and goes light; the other foot stays turned out at 90 degrees and keeps the weight.",
+  "Horse stance>Walking stance": "Pivot toward the new lead side, turn the hips to face along the line of your feet, stand up out of the squat and even the weight. Shorten the stance if it is too wide.",
+  "Horse stance>Cat stance": "Pivot toward the new lead side, sit almost entirely onto the rear leg, draw the lead foot in and raise its heel.",
+  "Front stance>Horse stance": "Turn the hips 90 degrees to face sideways while pivoting both feet so they point the same way, parallel. Sit down evenly on both legs and push the knees out.",
+  "Back stance>Horse stance": "Turn the hips 45 degrees further away until you face sideways, pivot the front foot to match the rear foot, then even the weight and sit down with the knees out.",
+  "Walking stance>Horse stance": "Turn the hips 90 degrees to face sideways, pivot both feet parallel, widen the stance and sit down evenly.",
+  "Cat stance>Horse stance": "Step the front foot out to the side to about two shoulder widths, drop its heel, turn the hips to face sideways, pivot both feet parallel and sit down evenly.",
+};
+
+function transitionText(prev, c) {
+  const from = prev && prev.stance ? prev.stance : "Ready stance";
+  const fromLead = prev ? prev.lead : "";
+  const fromSq = isSquare(from) || !fromLead;
+  const low = x => x.charAt(0).toLowerCase() + x.slice(1);
+
+  if (c.isKick) {
+    const kickLeg = (c.absSide || "").replace(" leg", "") || "The kicking";
+    let who;
+    if (from === "Ready stance") who = `From ready stance, the ${kickLeg.toLowerCase()} leg kicks straight from where it stands.`;
+    else if (fromSq) who = `From ${low(from)} there is no lead leg. Turn the hips toward the target as the ${kickLeg.toLowerCase()} leg lifts.`;
+    else if (kickLeg === fromLead) who = `You are ${low(fromLead)} leg forward in ${low(from)}, so this is a front-leg kick. Shift a little more weight onto the rear leg to free the front foot, then kick. Less hip drive is available, so it is a faster, lighter kick.`;
+    else who = `You are ${low(fromLead)} leg forward in ${low(from)}, so this is a rear-leg kick. Shift forward onto the front foot, pivot it as the kick needs, and let the hip bring the rear leg through. The rear leg carries the power.`;
+    let land;
+    if (c.cue === "Set it back") land = `After the kick, re-chamber the knee and put the foot back exactly where it came from. You end in the same ${low(c.stance)}, ${low(c.lead)} leg forward.`;
+    else if (!c.lead) land = `After the kick, set the foot down and settle into ${low(c.stance)}, feet parallel, weight even.`;
+    else if (c.lead === fromLead) land = `After the kick, re-chamber and set the foot down in front, landing in ${low(c.stance)} with the ${low(c.lead)} leg still forward.`;
+    else land = `After the kick, re-chamber and set the foot down in front. The kicking leg becomes the front leg, so you land ${low(c.lead)} leg forward in ${low(c.stance)}.`;
+    return `${who} ${land}`;
+  }
+
+  if (from === "Ready stance") {
+    return c.lead
+      ? `From ready stance, step the ${low(c.lead)} foot forward (or the other foot back) into ${low(c.stance)} and execute the technique as you settle.`
+      : `From ready stance, step out sideways into ${low(c.stance)} and execute the technique as you settle.`;
+  }
+  if (!c.lead) {
+    if (fromSq) return `Stay in ${low(c.stance)} and execute the technique. Nothing moves below the waist.`;
+    return shiftNotes[`${from}>${c.stance}`] || `Turn the hips to face sideways, bring the feet parallel into ${low(c.stance)} and execute the technique.`;
+  }
+  if (fromSq) {
+    return shiftNotes[`${from}>${c.stance}`]
+      ? `${shiftNotes[`${from}>${c.stance}`]} Here the ${low(c.lead)} leg leads. Execute the technique as the stance settles.`
+      : `From ${low(from)}, turn to face along the ${low(c.lead)} side and form ${low(c.stance)} with the ${low(c.lead)} leg forward, executing the technique as you settle.`;
+  }
+  if (c.lead !== fromLead) {
+    const dir = c.cue === "Step back" ? "back" : "forward";
+    const mover = dir === "forward" ? other(c.lead) : c.lead;
+    return dir === "forward"
+      ? `Step through: the rear ${low(mover)} foot steps past the front foot and lands as the new front foot, so you switch from ${low(fromLead)} to ${low(c.lead)} leg forward. Land directly in ${low(c.stance)} and finish the technique as the foot settles.`
+      : `Step back: the front ${low(fromLead)} foot steps behind the other, so you switch from ${low(fromLead)} to ${low(c.lead)} leg forward. Settle into ${low(c.stance)} and finish the technique as the foot lands.`;
+  }
+  if (c.stance === from) return `Same stance, same lead leg. Nothing moves below the waist; only the hips rotate as the technique fires.`;
+  return (shiftNotes[`${from}>${c.stance}`] || `Keep the ${low(c.lead)} leg forward and adjust the feet into ${low(c.stance)}.`) + " Execute the technique as the weight arrives.";
+}
+
+function openCallInfo() {
+  let html = "", title = "This call";
+  if (appMode === "forms") {
+    if (!currentStepText) return;
+    title = currentStepText.length > 40 ? currentStepText.slice(0, 40) + "…" : currentStepText;
+    const text = currentStepText.toLowerCase();
+    const found = allNames()
+      .filter(x => text.includes(x.name.toLowerCase()))
+      .sort((a, b) => text.indexOf(a.name.toLowerCase()) - text.indexOf(b.name.toLowerCase()));
+    // Drop names contained in a longer matched name (e.g. "punch" inside "reverse punch")
+    const keep = found.filter(x => !found.some(y => y !== x && y.name.length > x.name.length && y.name.toLowerCase().includes(x.name.toLowerCase())));
+    html = keep.length
+      ? `<div class="pop-section"><p>${esc(currentStepText)}</p></div>` + keep.map(x => sectionHTML(x.kind, x.name)).join("")
+      : `<div class="pop-section"><p>${esc(currentStepText)}</p><p class="empty">None of the technique names in this step match the pool, so there is nothing to describe. Rename the step to use pool names, or add the technique to the pool.</p></div>`;
+  } else {
+    const c = currentCall;
+    if (!c) return;
+    const t = callText(c);
+    title = c.isKick ? t.tech : `${t.stance}, ${t.tech}`;
+    const techKind = c.isKick ? "Kick" : (enabled.blocks.has(c.tech) ? "Block" : "Strike");
+    const sideNote = c.absSide || c.side || "";
+    const stanceNote = c.lead ? `${c.lead} leg forward` : "";
+    const prev = histPos > 0 ? history[histPos - 1].after : null;
+    const fromLabel = prev && prev.stance ? (prev.lead ? `${prev.lead} leg forward, ${prev.stance.toLowerCase()}` : prev.stance) : "Ready stance";
+    html = `<div class="pop-section"><h3>Transition · from ${esc(fromLabel)}</h3><p>${esc(transitionText(prev, c))}</p></div>`;
+    if (c.isKick) {
+      html += sectionHTML(techKind, c.tech, sideNote)
+        + sectionHTML(c.cue === "Set it back" ? "Set it back to" : "Land in", c.stance, stanceNote);
+    } else {
+      html += sectionHTML("Stance", c.stance, stanceNote) + sectionHTML(techKind, c.tech, sideNote);
+    }
+  }
+  infoName = "";
+  infoTitle.textContent = title;
+  infoText.hidden = true;
+  infoEdit.hidden = true;
+  infoSections.innerHTML = html;
+  infoSections.hidden = false;
+  el("info-edit-btn").hidden = true;
+  infoPop.hidden = false;
+}
+el("nav-info").addEventListener("click", openCallInfo);
+infoPop.addEventListener("click", e => { if (e.target === infoPop) closeInfo(); });
+
+pickerBody.addEventListener("click", e => {
+  const info = e.target.closest(".info-btn");
+  if (info) { openInfo(info.dataset.info); return; }
+  const rm = e.target.closest(".remove-btn");
+  if (rm) {
+    const g = groups.find(x => x.key === rm.dataset.remove);
+    g.items = g.items.filter(n => n !== rm.dataset.name);
+    enabled[g.key].delete(rm.dataset.name);
+    savePool(); renderPicker();
+    return;
+  }
+  const b = e.target.closest(".link-btn"); if (!b) return;
+  const key = b.dataset.all || b.dataset.none || b.dataset.reset;
+  const g = groups.find(x => x.key === key);
+  if (b.dataset.reset) {
+    g.items = [...defaults[key]];
+    enabled[key] = new Set(g.items);
+  } else {
+    enabled[key] = b.dataset.all ? new Set(g.items) : new Set();
+  }
+  savePool(); renderPicker();
+});
+
+// Mode switch
+function applyMode() {
+  const formsOn = appMode === "forms";
+  el("form-chips").hidden = !formsOn;
+  el("pool-row").hidden = formsOn;
+  el("leg-chips").hidden = formsOn;
+  el("hand-chips").hidden = formsOn;
+  stepBar.hidden = !formsOn;
+  el("step-nav").hidden = false;
+  el("cue-chips").hidden = formsOn;
+  commandBox.classList.toggle("form-mode", formsOn);
+  if (formsOn) {
+    const f = forms[formIndex];
+    stepIndex = 0;
+    lineLeg.textContent = `${f.name}  ·  ${f.steps.length} steps`;
+    lineTech.textContent = "Press play, or step through with Next";
+    stepBarFill.style.width = "0%";
+  } else {
+    lineLeg.textContent = "From ready stance";
+    lineStance.textContent = "Press play, or Next";
+    lineTech.textContent = "";
+    lineSide.textContent = "";
+  }
+}
+
+applyMode();
+
+el("mode-chips").addEventListener("click", e => {
+  const b = e.target.closest(".chip"); if (!b || !b.dataset.mode) return;
+  stopDrill();
+  appMode = b.dataset.mode;
+  history = []; histPos = -1; resetSequence();
+  el("mode-chips").querySelectorAll(".chip").forEach(c => c.classList.toggle("active", c === b));
+  applyMode();
+});
+
+el("form-chips").addEventListener("click", e => {
+  const b = e.target.closest(".chip"); if (!b || b.dataset.form === undefined) return;
+  stopDrill();
+  formIndex = parseInt(b.dataset.form, 10);
+  el("form-chips").querySelectorAll(".chip[data-form]").forEach(c => c.classList.toggle("active", c === b));
+  applyMode();
+});
+
+// Step editor
+const editor = el("editor"), formText = el("form-text");
+function openEditor() {
+  stopDrill();
+  el("editor-title").textContent = forms[formIndex].name;
+  formText.value = forms[formIndex].steps.join("\n");
+  editor.hidden = false;
+  formText.focus();
+}
+function commitEditor() {
+  const lines = formText.value.split("\n").map(s => s.trim()).filter(Boolean);
+  if (lines.length) { forms[formIndex].steps = lines; saveForms(); }
+  editor.hidden = true;
+  applyMode();
+}
+el("open-editor").addEventListener("click", openEditor);
+el("close-editor").addEventListener("click", commitEditor);
+el("reset-form").addEventListener("click", () => {
+  formText.value = formDefaults[formIndex].steps.join("\n");
+});
+
+// Share popup: QR code drawn from the page's own address, so it works wherever the app is hosted.
+const sharePop = el("share-pop"), shareUrl = el("share-url"), qrWrap = el("qr-wrap");
+let qrDrawn = "";
+function appUrl() {
+  // Strip any hash so the code opens the app itself, not a section.
+  return location.href.split("#")[0];
+}
+el("open-share").addEventListener("click", () => {
+  const url = appUrl();
+  shareUrl.value = url;
+  if (qrDrawn !== url) {
+    qrWrap.innerHTML = "";
+    if (window.QRCode) {
+      new QRCode(qrWrap, { text: url, width: 200, height: 200, correctLevel: QRCode.CorrectLevel.M, colorDark: "#0d0f14", colorLight: "#ffffff" });
+      qrDrawn = url;
+    } else {
+      qrWrap.innerHTML = '<p class="muted" style="color:#555;font-size:.8rem;text-align:center">QR code unavailable. Copy the link instead.</p>';
+    }
+  }
+  sharePop.hidden = false;
+});
+el("share-close").addEventListener("click", () => { sharePop.hidden = true; });
+sharePop.addEventListener("click", e => { if (e.target === sharePop) sharePop.hidden = true; });
+el("copy-url").addEventListener("click", () => {
+  const btn = el("copy-url");
+  const done = () => { btn.textContent = "Copied"; setTimeout(() => btn.textContent = "Copy", 1500); };
+  const fallback = () => { shareUrl.focus(); shareUrl.select(); btn.textContent = "Select and copy"; setTimeout(() => btn.textContent = "Copy", 2000); };
+  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(shareUrl.value).then(done, fallback);
+  else fallback();
+});
+
+el("open-picker").addEventListener("click", () => { renderPicker(); picker.hidden = false; });
+el("close-picker").addEventListener("click", () => { picker.hidden = true; });
+updateSummary();
+
+el("leg-chips").addEventListener("click", e => {
+  const b = e.target.closest(".chip"); if (!b) return;
+  legMode = b.dataset.leg;
+  el("leg-chips").querySelectorAll(".chip").forEach(c => c.classList.toggle("active", c === b));
+});
+
+el("cue-chips").addEventListener("click", e => {
+  const b = e.target.closest(".chip"); if (!b) return;
+  cuesOn = b.dataset.cue === "on";
+  el("cue-chips").querySelectorAll(".chip").forEach(c => c.classList.toggle("active", c === b));
+});
+
+el("hand-chips").addEventListener("click", e => {
+  const b = e.target.closest(".chip"); if (!b) return;
+  sideMode = b.dataset.hand;
+  callSide = sideMode !== "off";
+  el("hand-chips").querySelectorAll(".chip").forEach(c => c.classList.toggle("active", c === b));
+});
+
+document.addEventListener("keydown", e => {
+  if (e.code === "Escape" && !sharePop.hidden) { sharePop.hidden = true; return; }
+  if (e.code === "Escape" && !infoPop.hidden) { closeInfo(); return; }
+  if (e.code === "Escape" && !picker.hidden) { picker.hidden = true; return; }
+  if (e.code === "Escape" && !editor.hidden) { commitEditor(); return; }
+  const free = e.target === document.body && picker.hidden && editor.hidden && infoPop.hidden && sharePop.hidden;
+  if (free && e.code === "ArrowLeft") { e.preventDefault(); appMode === "forms" ? jumpTo(stepIndex - 2) : jumpRandom(histPos - 1); return; }
+  if (free && e.code === "ArrowRight") { e.preventDefault(); appMode === "forms" ? jumpTo(stepIndex) : jumpRandom(histPos + 1); return; }
+  if (e.code === "Space" && free) {
+    e.preventDefault();
+    running ? stopDrill() : startDrill();
+  }
+});
+</script>
+
+</body>
+</html>
