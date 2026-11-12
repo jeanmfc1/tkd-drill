@@ -504,7 +504,7 @@ body {
 <header class="header">
   <div class="logo"><span class="logo-dot"></span>TKD Drill Caller</div>
   <div class="header-right">
-    <span class="badge" id="version-badge" title="App version">v1.2</span>
+    <span class="badge" id="version-badge" title="App version">v1.3</span>
     <button class="chip" id="open-share" title="Share this app">Share</button>
     <span class="badge" id="session-badge">Ready</span>
   </div>
@@ -569,6 +569,12 @@ body {
     <button class="chip" data-form="6">7 Chil</button>
     <button class="chip" data-form="7">8 Pal</button>
     <button class="chip" id="open-editor">Edit steps</button>
+  </div>
+
+  <div class="ctrl-row" id="detail-chips" hidden>
+    <span class="ctrl-label">Calls</span>
+    <button class="chip" data-detail="short">Short</button>
+    <button class="chip" data-detail="detailed">Detailed</button>
   </div>
 
   <div class="ctrl-row" id="cue-chips">
@@ -689,7 +695,7 @@ body {
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script>
-const APP_VERSION = "1.2";
+const APP_VERSION = "1.3";
 const defaults = {
   stances: ["Front stance", "Back stance", "Walking stance", "Horse stance", "Cat stance"],
   blocks:  ["Low block", "High block", "Inside block", "Outside block", "Knife hand block", "X block", "Pressing block"],
@@ -1087,18 +1093,210 @@ const formDefaults = [
   ]},
 ];
 
-const forms = formDefaults.map(f => ({ name: f.name, steps: f.steps.slice() }));
+
+// Detailed call sets: which foot moves or pivots, how far you turn, and which foot ends up in front.
+// "Front" is the direction you faced in ready stance; "the start" means facing back toward where you began.
+const formDetailed = [
+  [ // Taegeuk 1
+    "Pivot on the right foot and move the left foot out to the left, turning 90 degrees to the left. Left walking stance, left foot in front. Left low block",
+    "Step the right foot forward. Right walking stance, right foot in front. Right middle punch",
+    "Pivot on the left foot and swing the right foot around behind you, turning 180 degrees clockwise. Right walking stance, right foot in front. Right low block",
+    "Step the left foot forward. Left walking stance. Left middle punch",
+    "Pivot on the right foot and move the left foot to the left, turning 90 degrees left to face the front. Left front stance, left foot in front. Left low block",
+    "Feet stay. Rotate the hips. Right reverse punch",
+    "Pivot on the left foot and move the right foot to the right, turning 90 degrees to the right. Right walking stance, right foot in front. Left inside block with the rear hand",
+    "Step the left foot forward. Left walking stance. Right reverse punch",
+    "Pivot on the right foot and swing the left foot around, turning 180 degrees counter-clockwise. Left walking stance, left foot in front. Right inside block with the rear hand",
+    "Step the right foot forward. Right walking stance. Left reverse punch",
+    "Pivot on the left foot and move the right foot to the right, turning 90 degrees right to face the front. Right front stance, right foot in front. Right low block",
+    "Feet stay. Rotate the hips. Left reverse punch",
+    "Pivot on the right foot and move the left foot to the left, turning 90 degrees to the left. Left walking stance, left foot in front. Left high block",
+    "Right front kick with the rear leg. Set the right foot down in front. Right walking stance. Right middle punch",
+    "Pivot on the left foot and swing the right foot around, turning 180 degrees clockwise. Right walking stance, right foot in front. Right high block",
+    "Left front kick with the rear leg. Set the left foot down in front. Left walking stance. Left middle punch",
+    "Pivot on the right foot and move the left foot to the right, turning 90 degrees right so you face back toward the start. Left front stance, left foot in front. Left low block",
+    "Step the right foot forward. Right front stance, right foot in front. Right middle punch. Kihap",
+    "Pivot on the right foot and swing the left foot around, turning 180 degrees counter-clockwise to face the front. Bring the feet together. Ready stance",
+  ],
+  [ // Taegeuk 2
+    "Pivot on the right foot and move the left foot out to the left, turning 90 degrees to the left. Left walking stance, left foot in front. Left low block",
+    "Step the right foot forward. Right front stance, right foot in front. Right middle punch",
+    "Pivot on the left foot and swing the right foot around behind you, turning 180 degrees clockwise. Right walking stance, right foot in front. Right low block",
+    "Step the left foot forward. Left front stance, left foot in front. Left middle punch",
+    "Pivot on the right foot and move the left foot to the left, turning 90 degrees left to face the front. Left walking stance, left foot in front. Right inside block with the rear hand",
+    "Step the right foot forward. Right walking stance. Left inside block with the rear hand",
+    "Pivot on the right foot and move the left foot to the left, turning 90 degrees to the left. Left walking stance. Left low block",
+    "Right front kick with the rear leg. Set the right foot down in front. Right front stance. Right high punch",
+    "Pivot on the left foot and swing the right foot around, turning 180 degrees clockwise. Right walking stance, right foot in front. Right low block",
+    "Left front kick with the rear leg. Set the left foot down in front. Left front stance. Left high punch",
+    "Pivot on the right foot and move the left foot to the left, turning 90 degrees left to face the front. Left walking stance. Left high block",
+    "Step the right foot forward. Right walking stance. Right high block",
+    "Pivot on the right foot and swing the left foot all the way around, turning 270 degrees counter-clockwise so you face the right side. Left walking stance, left foot in front. Right inside block with the rear hand",
+    "Pivot on the left foot and swing the right foot around, turning 180 degrees clockwise to face the left side. Right walking stance, right foot in front. Left inside block with the rear hand",
+    "Pivot on the right foot and move the left foot to the left, turning 90 degrees left so you face back toward the start. Left walking stance. Left low block",
+    "Right front kick with the rear leg. Set it down in front. Right walking stance. Right middle punch",
+    "Left front kick with the rear leg. Set it down in front. Left walking stance. Left middle punch",
+    "Right front kick with the rear leg. Set it down in front. Right walking stance. Right middle punch. Kihap",
+    "Pivot on the right foot and swing the left foot around, turning 180 degrees counter-clockwise to face the front. Ready stance",
+  ],
+  [ // Taegeuk 3
+    "Pivot on the right foot and move the left foot out to the left, turning 90 degrees to the left. Left walking stance, left foot in front. Left low block",
+    "Right front kick with the rear leg. Set the right foot down in front. Right front stance. Double punch, right then left",
+    "Pivot on the left foot and swing the right foot around behind you, turning 180 degrees clockwise. Right walking stance, right foot in front. Right low block",
+    "Left front kick with the rear leg. Set the left foot down in front. Left front stance. Double punch, left then right",
+    "Pivot on the right foot and move the left foot to the left, turning 90 degrees left to face the front. Left walking stance, left foot in front. Right inward knife hand strike to the neck, palm up",
+    "Step the right foot forward. Right walking stance. Left inward knife hand strike to the neck",
+    "Pivot on the right foot and move the left foot to the left, turning 90 degrees to the left. Back stance, left foot in front, weight on the right leg. Left single knife hand block",
+    "Slide the left foot forward and shift the weight onto it. Left front stance. Right reverse punch",
+    "Pivot on the left foot and swing the right foot around, turning 180 degrees clockwise. Back stance, right foot in front, weight on the left leg. Right single knife hand block",
+    "Slide the right foot forward and shift the weight onto it. Right front stance. Left reverse punch",
+    "Pivot on the right foot and move the left foot to the left, turning 90 degrees left to face the front. Left walking stance. Right inside block with the rear hand",
+    "Step the right foot forward. Right walking stance. Left inside block with the rear hand",
+    "Pivot on the right foot and swing the left foot all the way around, turning 270 degrees counter-clockwise so you face the right side. Left walking stance, left foot in front. Left low block",
+    "Right front kick with the rear leg. Set it down in front. Right front stance. Double punch, right then left",
+    "Pivot on the left foot and swing the right foot around, turning 180 degrees clockwise to face the left side. Right walking stance. Right low block",
+    "Left front kick with the rear leg. Set it down in front. Left front stance. Double punch, left then right",
+    "Pivot on the right foot and move the left foot to the left, turning 90 degrees left so you face back toward the start. Left walking stance. Left low block, then right reverse punch",
+    "Step the right foot forward. Right walking stance. Right low block, then left reverse punch",
+    "Left front kick with the rear leg. Set it down in front. Left walking stance. Left low block, then right reverse punch",
+    "Right front kick with the rear leg. Set it down in front. Right walking stance. Right low block, then left reverse punch. Kihap",
+    "Pivot on the right foot and swing the left foot around, turning 180 degrees counter-clockwise to face the front. Ready stance",
+  ],
+  [ // Taegeuk 4
+    "Pivot on the right foot and move the left foot out to the left, turning 90 degrees to the left. Back stance, left foot in front, weight on the right leg. Double knife hand block, left hand leading",
+    "Step the right foot forward. Right front stance, right foot in front. Right spear hand thrust, left palm under the right elbow",
+    "Pivot on the left foot and swing the right foot around behind you, turning 180 degrees clockwise. Back stance, right foot in front, weight on the left leg. Double knife hand block, right hand leading",
+    "Step the left foot forward. Left front stance. Left spear hand thrust, right palm under the left elbow",
+    "Pivot on the right foot and move the left foot to the left, turning 90 degrees left to face the front. Left front stance, left foot in front. Left high knife hand block and right knife hand strike to the neck, together",
+    "Right front kick with the rear leg. Set the right foot down in front. Right front stance. Left reverse punch",
+    "Left side kick: step the left foot through and kick, set it down in front. Then right side kick, set it down in front. Back stance, right foot in front, weight on the left leg. Double knife hand block",
+    "Pivot on the right foot and swing the left foot all the way around, turning 270 degrees counter-clockwise so you face the right side. Back stance, left foot in front, weight on the right leg. Left outside block",
+    "Right front kick with the rear leg, then put the right foot back where it was. Same back stance, left foot in front. Right inside block with the rear hand",
+    "Pivot on both feet, turning 180 degrees clockwise to face the left side. Back stance, right foot in front, weight on the left leg. Right outside block",
+    "Left front kick with the rear leg, then put the left foot back where it was. Same back stance, right foot in front. Left inside block with the rear hand",
+    "Pivot on the right foot and move the left foot to the left, turning 90 degrees left so you face back toward the start. Left front stance. Left high knife hand block and right knife hand strike to the neck, together",
+    "Right front kick with the rear leg. Set the right foot down in front. Right front stance. Right backfist to the face",
+    "Pivot on the right foot and move the left foot to the left, turning 90 degrees to the left. Left walking stance, left foot in front. Left inside block, then right reverse punch",
+    "Pivot on the left foot and swing the right foot around, turning 180 degrees clockwise. Right walking stance, right foot in front. Right inside block, then left reverse punch",
+    "Pivot on the right foot and move the left foot to the left, turning 90 degrees left so you face back toward the start. Left front stance. Left inside block, then double punch, right then left",
+    "Step the right foot forward. Right front stance. Right inside block, then double punch, left then right. Kihap",
+    "Pivot on the right foot and swing the left foot around, turning 180 degrees counter-clockwise to face the front. Ready stance",
+  ],
+  [ // Taegeuk 5
+    "Pivot on the right foot and move the left foot out to the left, turning 90 degrees to the left. Left front stance, left foot in front. Left low block",
+    "Draw the left foot back beside the right foot, feet together. Swing the left hammer fist up and down in front of you",
+    "Step the right foot out to the right, turning to face the right side. Right front stance, right foot in front. Right low block",
+    "Draw the right foot back beside the left foot, feet together. Swing the right hammer fist up and down in front of you",
+    "Step the left foot out to the left, turning to face the front. Left front stance, left foot in front. Left inside block, then right inside block with the rear hand",
+    "Right front kick with the rear leg. Set the right foot down in front. Right front stance. Right backfist to the face, then left inside block",
+    "Left front kick with the rear leg. Set the left foot down in front. Left front stance. Left backfist to the face, then right inside block",
+    "Step the right foot forward. Right front stance. Right backfist to the face. Kihap",
+    "Pivot on the right foot and swing the left foot all the way around, turning 270 degrees counter-clockwise so you face the right side. Back stance, left foot in front, weight on the right leg. Left single knife hand block",
+    "Step the right foot forward. Right front stance. Right elbow strike across, turning the hips",
+    "Pivot on the left foot and swing the right foot around, turning 180 degrees clockwise to face the left side. Back stance, right foot in front, weight on the left leg. Right single knife hand block",
+    "Step the left foot forward. Left front stance. Left elbow strike across",
+    "Pivot on the right foot and move the left foot to the left, turning 90 degrees left so you face back toward the start. Left front stance. Left low block, then right inside block",
+    "Right front kick with the rear leg. Set the right foot down in front. Right front stance. Right low block, then left inside block",
+    "Pivot on the right foot and move the left foot to the left, turning 90 degrees left to face the right side. Left front stance, left foot in front. Left high block",
+    "Right side kick with the rear leg. Set the right foot down in front. Right front stance. Left elbow strike into the right palm",
+    "Pivot on the left foot and swing the right foot around, turning 180 degrees clockwise to face the left side. Right front stance, right foot in front. Right high block",
+    "Left side kick with the rear leg. Set the left foot down in front. Left front stance. Right elbow strike into the left palm",
+    "Pivot on the right foot and move the left foot to the left, turning 90 degrees left so you face back toward the start. Left front stance. Left low block, then right inside block",
+    "Right front kick with the rear leg, then jump forward. Land with the right foot in front and the left foot crossed behind it, cross stance. Right backfist. Kihap",
+    "Pivot and swing the left foot around, turning 180 degrees counter-clockwise to face the front. Ready stance",
+  ],
+  [ // Taegeuk 6
+    "Pivot on the right foot and move the left foot out to the left, turning 90 degrees to the left. Left front stance, left foot in front. Left low block",
+    "Right front kick with the rear leg, then pull the right foot back where it was and sit into back stance, left foot in front, weight on the right leg. Right outside block with the rear hand",
+    "Draw the left foot in beside the right, then step the right foot out to the right, turning 180 degrees clockwise. Right front stance, right foot in front. Right low block",
+    "Left front kick with the rear leg, then pull the left foot back where it was and sit into back stance, right foot in front, weight on the left leg. Left outside block with the rear hand",
+    "Pivot on the right foot and move the left foot to the left, turning 90 degrees left to face the front. Left front stance, left foot in front. Right knife hand high twist block with the rear hand",
+    "Right turning kick with the rear leg",
+    "Set the right foot down beside the left, then step the left foot out to the left, turning 90 degrees to the left. Left front stance, left foot in front. Left high outside block, then right reverse punch",
+    "Right front kick with the rear leg. Set the right foot down in front. Right front stance. Left reverse punch",
+    "Pivot on the left foot and swing the right foot around, turning 180 degrees clockwise. Right front stance, right foot in front. Right high outside block, then left reverse punch",
+    "Left front kick with the rear leg. Set the left foot down in front. Left front stance. Right reverse punch",
+    "Draw the left foot in toward the right, turning to face the front, feet parallel a shoulder width apart. Parallel stance. Double low block, slowly, spreading the arms down and out",
+    "Step the right foot forward. Right front stance, right foot in front. Left knife hand high twist block with the rear hand",
+    "Left turning kick with the rear leg",
+    "Set the left foot down beside the right, then turn 270 degrees clockwise, stepping the right foot out so you face the left side. Right front stance, right foot in front. Right low block",
+    "Left front kick with the rear leg, then pull the left foot back where it was and sit into back stance, right foot in front, weight on the left leg. Left outside block with the rear hand",
+    "Pivot on the right foot and swing the left foot around, turning 180 degrees counter-clockwise to face the right side. Left front stance, left foot in front. Left low block",
+    "Right front kick with the rear leg, then pull the right foot back where it was and sit into back stance, left foot in front, weight on the right leg. Right outside block with the rear hand",
+    "Pivot on the left foot and step the right foot back, turning 90 degrees left to face the front. Back stance, left foot in front, weight on the right leg. Double knife hand block",
+    "Step the left foot back. Back stance, right foot in front, weight on the left leg. Double knife hand block",
+    "Step the right foot back. Left front stance, left foot in front. Left palm block, then right reverse punch",
+    "Step the left foot back. Right front stance, right foot in front. Right palm block, then left reverse punch",
+    "Draw the left foot up beside the right foot. Ready stance",
+  ],
+  [ // Taegeuk 7
+    "Pivot on the right foot and move the left foot out to the left, turning 90 degrees to the left. Cat stance, left foot in front on the ball of the foot, weight on the right leg. Right palm block with the rear hand",
+    "Right front kick with the rear leg, then put the right foot back where it was. Same cat stance, left foot in front. Left inside block",
+    "Pivot on the left foot and swing the right foot around behind you, turning 180 degrees clockwise. Cat stance, right foot in front, weight on the left leg. Left palm block with the rear hand",
+    "Left front kick with the rear leg, then put the left foot back where it was. Same cat stance, right foot in front. Right inside block",
+    "Pivot on the right foot and move the left foot to the left, turning 90 degrees left to face the front. Back stance, left foot in front, weight on the right leg. Double knife hand low block",
+    "Step the right foot forward. Back stance, right foot in front, weight on the left leg. Double knife hand low block",
+    "Pivot on the right foot and move the left foot to the left, turning 90 degrees to the left. Cat stance, left foot in front. Left palm block, then turn the upper body and strike with the right backfist",
+    "Pivot on the left foot and swing the right foot around, turning 180 degrees clockwise. Cat stance, right foot in front. Right palm block, then left backfist",
+    "Pivot on the right foot and bring the left foot in beside it, turning 90 degrees left to face the front, feet together. Circle both arms up, out and down, finishing with the left hand covering the right fist at the chin. Slowly, with the breath",
+    "Step the left foot forward. Left front stance, left foot in front. Scissors block: left low block and right inside block together, then switch to right low and left inside",
+    "Step the right foot forward. Right front stance. Scissors block: right low block and left inside block together, then switch to left low and right inside",
+    "Cross the hands at the chest. Pivot on the right foot and swing the left foot all the way around, turning 270 degrees counter-clockwise so you face the right side. Left front stance, left foot in front. Wedge block, both forearms pushing outward",
+    "Right knee strike with the rear leg, then jump forward and land with the right foot in front and the left foot crossed behind it, cross stance. Double upper cut. Then step the left foot back. Right front stance, right foot in front. Low X block, right hand on top",
+    "Pivot on the left foot and swing the right foot around, turning 180 degrees clockwise to face the left side. Right front stance, right foot in front. Wedge block",
+    "Left knee strike with the rear leg, then jump forward and land with the left foot in front and the right foot crossed behind it, cross stance. Double upper cut. Then step the right foot back. Left front stance, left foot in front. Low X block, left hand on top",
+    "Pivot on the right foot and move the left foot to the left, turning 90 degrees left so you face back toward the start. Left walking stance, left foot in front. Left backfist, striking sideways",
+    "Right crescent kick with the rear leg into the left palm, then set the right foot down to the side. Horse stance, feet parallel. Right elbow strike into the left palm",
+    "Pivot on the right foot to face back toward the start and bring the left foot up behind it. Right walking stance, right foot in front. Right backfist, striking sideways",
+    "Left crescent kick with the rear leg into the right palm, then set the left foot down to the side. Horse stance. Left elbow strike into the right palm",
+    "Stay in horse stance. Left single knife hand side block",
+    "Step the right foot across in front of the left, moving toward the start. Horse stance, feet parallel. Right side punch. Kihap",
+    "Draw the left foot back beside the right and turn to face the front. Ready stance",
+  ],
+  [ // Taegeuk 8
+    "Step the left foot forward. Back stance, left foot in front, weight on the right leg. Augmented outside block, left arm blocking with the right fist supporting. Then slide forward into left front stance. Right reverse punch",
+    "Jump front kick: push off, lift the left leg and kick with the right in the air. Kihap. Land with the left foot in front. Left front stance. Left inside block, then double punch, right then left",
+    "Step the right foot forward. Right front stance, right foot in front. Right middle punch",
+    "Keep the right foot in front and pivot on it, swinging the left foot back and turning 90 degrees to the left so you face the left side. Right front stance. Right single mountain block, right high outside block and left low block together, looking over to the right side",
+    "Pivot on both feet in place, turning 180 degrees to face the right side. Left front stance, left foot in front. Right upper cut, with the left fist drawn to the right shoulder",
+    "Cross the left foot in front of the right, then step the right foot out to the left side so the left foot ends in front. Left front stance, facing the right side. Left single mountain block, left high outside block and right low block together, looking over to the left side",
+    "Pivot on both feet in place, turning 180 degrees to face the left side. Right front stance, right foot in front. Left upper cut, with the right fist drawn to the left shoulder",
+    "Pivot on the left foot and swing the right foot back, turning to face the front. Back stance, left foot in front, weight on the right leg. Double knife hand block. Then slide forward into left front stance. Right reverse punch",
+    "Right front kick with the rear leg, bring the right foot back beside the left, then step the left foot back. Cat stance, right foot in front, weight on the left leg. Right palm block",
+    "Pivot on the right foot and move the left foot to the left, turning 90 degrees left to face the left side. Cat stance, left foot in front, weight on the right leg. Double knife hand block",
+    "Left front kick with the front leg. Set the left foot down in front. Left front stance. Right reverse punch. Then pull the left foot back into cat stance, left foot in front. Left palm block",
+    "Pivot on the left foot and swing the right foot around, turning 180 degrees clockwise to face the right side. Cat stance, right foot in front, weight on the left leg. Double knife hand block",
+    "Right front kick with the front leg. Set the right foot down in front. Right front stance. Left reverse punch. Then pull the right foot back into cat stance, right foot in front. Right palm block",
+    "Pivot on the left foot and move the right foot to the right, turning 90 degrees right so you face back toward the start. Back stance, right foot in front, weight on the left leg. Augmented low block, right arm blocking with the left fist supporting",
+    "Left front kick with the rear leg, set it down, then jump and right front kick. Land with the right foot in front. Right front stance. Right inside block, then left reverse punch. Kihap",
+    "Pivot on the right foot and swing the left foot all the way around, turning 270 degrees counter-clockwise so you face the left side. Back stance, left foot in front, weight on the right leg. Left single knife hand block. Then slide into left front stance: right elbow strike across, right backfist, left punch",
+    "Pivot on the left foot and swing the right foot around, turning 180 degrees clockwise to face the right side. Back stance, right foot in front, weight on the left leg. Right single knife hand block. Then slide into right front stance: left elbow strike across, left backfist, right punch",
+    "Draw the left foot in beside the right foot and turn to face the front. Ready stance",
+  ],
+];
+
+const forms = formDefaults.map((f, i) => ({ name: f.name, steps: f.steps.slice(), detailed: formDetailed[i].slice() }));
 const FORMS_KEY = "tkd-drill-forms-v1";
+const FORMS_DETAIL_KEY = "tkd-drill-forms-detailed-v1";
+const DETAIL_KEY = "tkd-drill-detail-level";
+let detailLevel = "short"; // "short" | "detailed"
+try { detailLevel = localStorage.getItem(DETAIL_KEY) === "detailed" ? "detailed" : "short"; } catch (e) {}
 function loadForms() {
   try {
     const saved = JSON.parse(localStorage.getItem(FORMS_KEY) || "null");
-    if (!Array.isArray(saved)) return;
-    saved.forEach((steps, i) => { if (forms[i] && Array.isArray(steps) && steps.length) forms[i].steps = steps; });
+    if (Array.isArray(saved)) saved.forEach((steps, i) => { if (forms[i] && Array.isArray(steps) && steps.length) forms[i].steps = steps; });
+    const savedD = JSON.parse(localStorage.getItem(FORMS_DETAIL_KEY) || "null");
+    if (Array.isArray(savedD)) savedD.forEach((steps, i) => { if (forms[i] && Array.isArray(steps) && steps.length) forms[i].detailed = steps; });
   } catch (e) {}
 }
 function saveForms() {
-  try { localStorage.setItem(FORMS_KEY, JSON.stringify(forms.map(f => f.steps))); } catch (e) {}
+  try {
+    localStorage.setItem(FORMS_KEY, JSON.stringify(forms.map(f => f.steps)));
+    localStorage.setItem(FORMS_DETAIL_KEY, JSON.stringify(forms.map(f => f.detailed)));
+  } catch (e) {}
 }
+// The step list currently in use for a form
+function activeSteps(f) { return detailLevel === "detailed" ? f.detailed : f.steps; }
 loadForms();
 
 let appMode = "random";
@@ -1395,7 +1593,7 @@ function tick() {
   ringFill.style.strokeDashoffset = CIRC;
   if (appMode === "forms") {
     const f = forms[formIndex];
-    if (stepIndex >= f.steps.length) { stopDrill(); sessionBadge.textContent = "Form done"; return; }
+    if (stepIndex >= activeSteps(f).length) { stopDrill(); sessionBadge.textContent = "Form done"; return; }
     count++;
     drillCount.textContent = count;
     sessionBadge.textContent = `#${count}`;
@@ -1428,7 +1626,7 @@ let replayOnPlay = false;
 
 function jumpTo(i) {
   const f = forms[formIndex];
-  i = Math.max(0, Math.min(i, f.steps.length - 1));
+  i = Math.max(0, Math.min(i, activeSteps(f).length - 1));
   interrupt();
   stepIndex = i;
   if (running) {
@@ -1473,7 +1671,7 @@ function startDrill() {
   if (appMode === "random" && !poolReady()) { idleHint.hidden = false; idleHint.textContent = "Pick at least one stance and one technique."; return; }
   if (appMode === "forms") {
     if (replayOnPlay) stepIndex = Math.max(0, stepIndex - 1);
-    if (stepIndex >= forms[formIndex].steps.length) stepIndex = 0;
+    if (stepIndex >= activeSteps(forms[formIndex]).length) stepIndex = 0;
     stepBar.hidden = false;
   } else if (history.length === 0) {
     resetSequence();
@@ -1778,6 +1976,8 @@ pickerBody.addEventListener("click", e => {
 function applyMode() {
   const formsOn = appMode === "forms";
   el("form-chips").hidden = !formsOn;
+  el("detail-chips").hidden = !formsOn;
+  el("detail-chips").querySelectorAll(".chip").forEach(c => c.classList.toggle("active", c.dataset.detail === detailLevel));
   el("pool-row").hidden = formsOn;
   el("leg-chips").hidden = formsOn;
   el("hand-chips").hidden = formsOn;
@@ -1788,7 +1988,7 @@ function applyMode() {
   if (formsOn) {
     const f = forms[formIndex];
     stepIndex = 0;
-    lineLeg.textContent = `${f.name}  ·  ${f.steps.length} steps`;
+    lineLeg.textContent = `${f.name}  ·  ${activeSteps(f).length} steps  ·  ${detailLevel}`;
     lineTech.textContent = "Press play, or step through with Next";
     stepBarFill.style.width = "0%";
   } else {
@@ -1810,6 +2010,14 @@ el("mode-chips").addEventListener("click", e => {
   applyMode();
 });
 
+el("detail-chips").addEventListener("click", e => {
+  const b = e.target.closest(".chip"); if (!b || !b.dataset.detail) return;
+  stopDrill();
+  detailLevel = b.dataset.detail;
+  try { localStorage.setItem(DETAIL_KEY, detailLevel); } catch (e) {}
+  applyMode();
+});
+
 el("form-chips").addEventListener("click", e => {
   const b = e.target.closest(".chip"); if (!b || b.dataset.form === undefined) return;
   stopDrill();
@@ -1822,21 +2030,21 @@ el("form-chips").addEventListener("click", e => {
 const editor = el("editor"), formText = el("form-text");
 function openEditor() {
   stopDrill();
-  el("editor-title").textContent = forms[formIndex].name;
-  formText.value = forms[formIndex].steps.join("\n");
+  el("editor-title").textContent = `${forms[formIndex].name} (${detailLevel})`;
+  formText.value = activeSteps(forms[formIndex]).join("\n");
   editor.hidden = false;
   formText.focus();
 }
 function commitEditor() {
   const lines = formText.value.split("\n").map(s => s.trim()).filter(Boolean);
-  if (lines.length) { forms[formIndex].steps = lines; saveForms(); }
+  if (lines.length) { if (detailLevel === "detailed") forms[formIndex].detailed = lines; else forms[formIndex].steps = lines; saveForms(); }
   editor.hidden = true;
   applyMode();
 }
 el("open-editor").addEventListener("click", openEditor);
 el("close-editor").addEventListener("click", commitEditor);
 el("reset-form").addEventListener("click", () => {
-  formText.value = formDefaults[formIndex].steps.join("\n");
+  formText.value = (detailLevel === "detailed" ? formDetailed[formIndex] : formDefaults[formIndex].steps).join("\n");
 });
 
 // Share popup: QR code drawn from the page's own address, so it works wherever the app is hosted.
