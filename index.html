@@ -486,6 +486,13 @@ body {
 .done-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 .summary-text { font-size: 0.72rem; color: var(--fg-muted); margin-left: auto; font-variant-numeric: tabular-nums; }
 
+.update-banner {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  margin-top: 10px; padding: 10px 14px; border-radius: 8px;
+  background: var(--accent-glow); border: 1px solid var(--accent-dim); color: var(--fg);
+  font-size: 0.85rem;
+}
+
 .no-speech-warn {
   font-size: 0.75rem; color: var(--fg-muted); text-align: center;
   padding: 8px; background: var(--chip-bg); border-radius: 6px; margin-top: 10px;
@@ -497,11 +504,16 @@ body {
 <header class="header">
   <div class="logo"><span class="logo-dot"></span>TKD Drill Caller</div>
   <div class="header-right">
-    <span class="badge" id="version-badge" title="App version">v1.1</span>
+    <span class="badge" id="version-badge" title="App version">v1.2</span>
     <button class="chip" id="open-share" title="Share this app">Share</button>
     <span class="badge" id="session-badge">Ready</span>
   </div>
 </header>
+
+<div class="update-banner" id="update-banner" hidden>
+  <span id="update-text">A newer version is ready.</span>
+  <button class="done-btn" id="update-reload">Reload</button>
+</div>
 
 <div class="no-speech-warn" id="no-speech-warn" hidden>
   This browser can't speak. Commands will show on screen only.
@@ -677,6 +689,7 @@ body {
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script>
+const APP_VERSION = "1.2";
 const defaults = {
   stances: ["Front stance", "Back stance", "Walking stance", "Horse stance", "Cat stance"],
   blocks:  ["Low block", "High block", "Inside block", "Outside block", "Knife hand block", "X block", "Pressing block"],
@@ -1879,6 +1892,31 @@ el("hand-chips").addEventListener("click", e => {
   callSide = sideMode !== "off";
   el("hand-chips").querySelectorAll(".chip").forEach(c => c.classList.toggle("active", c === b));
 });
+
+// Update check: compare the version baked into this page with version.json on the server.
+// Runs on load, when the app comes back to the foreground, and every 10 minutes.
+(function () {
+  const banner = el("update-banner"), text = el("update-text");
+  el("version-badge").textContent = "v" + APP_VERSION;
+  let notified = false;
+  async function check() {
+    if (notified || !/^https?:/.test(location.protocol)) return;
+    try {
+      const r = await fetch("version.json?t=" + Date.now(), { cache: "no-store" });
+      if (!r.ok) return;
+      const j = await r.json();
+      if (j.version && j.version !== APP_VERSION) {
+        notified = true;
+        text.textContent = `Version ${j.version} is ready (you have ${APP_VERSION}).`;
+        banner.hidden = false;
+      }
+    } catch (e) {}
+  }
+  el("update-reload").addEventListener("click", () => location.reload());
+  check();
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) check(); });
+  setInterval(check, 10 * 60 * 1000);
+})();
 
 document.addEventListener("keydown", e => {
   if (e.code === "Escape" && !sharePop.hidden) { sharePop.hidden = true; return; }
